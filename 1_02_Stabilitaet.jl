@@ -71,7 +71,7 @@ function example_sqrt(T)
 	axislegend(ax; position = :lt)
 	
 	return fig
-end
+end;
 
 # ╔═╡ 852c0685-d881-4683-935e-8c423772fbbe
 example_sqrt(Float64)
@@ -121,7 +121,7 @@ function compute_e_sequence(T)
 	linkxaxes!(ax1, ax2)
 	
 	return fig
-end
+end;
 
 # ╔═╡ 6712c094-f5fc-45cc-8e81-6b8cf3679939
 compute_e_sequence(Float64)
@@ -158,7 +158,7 @@ function compute_e_series(T)
 	linkxaxes!(ax1, ax2)
 	
 	return fig
-end
+end;
 
 # ╔═╡ 1360675a-46d1-476c-81e1-63b63ea130fc
 compute_e_series(Float64)
@@ -1735,7 +1735,7 @@ version = "3.6.0+0"
 # ╟─f8c834d2-ded1-4e9d-a3a8-dd109295082c
 # ╟─106a0304-ebc7-4d5a-8cad-3c2790297d87
 # ╟─d1e3bebc-542b-410b-ac32-30579e2899e4
-# ╠═1360675a-46d1-476c-81e1-63b63ea130fc
+# ╟─1360675a-46d1-476c-81e1-63b63ea130fc
 # ╟─20b0fddc-27ea-4d53-8014-5facc64c2513
 # ╟─96351793-9bcc-4376-9c95-b6b42f061ad8
 # ╟─bc148aac-1ef7-4611-b187-72f1255ff05f
