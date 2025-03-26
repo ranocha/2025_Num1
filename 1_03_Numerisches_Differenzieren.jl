@@ -44,7 +44,7 @@ using Enzyme
 
 # ╔═╡ e6c64c80-773b-11ef-2379-bf6609137e69
 md"""
-# 1.3 Numerische Differentiation und automatische/algorithmische Differentiation (AD)
+# 1.3 Numerisches Differenzieren
 
 Wir betrachten den Fehler der Vorwärtsdifferenzen
 
