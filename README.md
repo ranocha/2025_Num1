@@ -1,4 +1,4 @@
-# Additional material for the lecture "Mathematik für Informatiker 2b" (in German), winter term 2024/2025
+# Additional material for the lecture "Grundlagen der Numerik" (in German), summer term 2025
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
 
