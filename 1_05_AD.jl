@@ -38,7 +38,7 @@ using SymPyPythonCall
 
 # ╔═╡ e6c64c80-773b-11ef-2379-bf6609137e69
 md"""
-# 1.4 Automatisches/algorithmisches Differenzieren (AD)
+# 1.5 Automatisches/algorithmisches Differenzieren (AD)
 
 Algorithmisches/automatisches Differenzieren (AD) ist essentieller
 Bestandteil vieler Anwendungen im maschinellen Lernen (deep learning).
