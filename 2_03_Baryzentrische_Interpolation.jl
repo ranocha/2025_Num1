@@ -36,121 +36,60 @@ end
 # ╔═╡ 2f2ccf7b-78f3-4a10-bb77-7bdd5ebd8f2a
 using LaTeXStrings
 
+# ╔═╡ b7d3c924-af00-4c9f-97d2-d458a658ce86
+using DoubleFloats
+
 # ╔═╡ e6c64c80-773b-11ef-2379-bf6609137e69
 md"""
-# 2.1 Polynominterpolation
+# 2.3 Baryzentrische Interpolation
 
-Als erstes betrachten wir das Beispiel aus der Vorlesung:
+Hier verwenden wir die 2. baryzentrische Formel
 
-> Bestimmen Sie eine Parabel, die durch die Punkte $(0, -3)$, $(1, 0)$ und $(2, 5)$ verläuft.
+$$p(x)
+          =
+          \frac{ \sum_{j=0}^n \frac{w_j y_j}{x - x_j} }
+              { \sum_{j=0}^n \frac{w_j}{x - x_j} }$$
 
-Das Vorgehen dort führt auf das lineare Gleichungssystem
+mit den baryzentrischen Gewichten
 
-$$\begin{equation*}
-  \begin{aligned}
-    p(0) &= a_0 = -3, \\
-    p(1) &= a_2 + a_1 + a_0 = 0, \\
-    p(2) &= 4 a_2 + 2 a_1 + a_0 = 5,
-  \end{aligned}
-  \end{equation*}$$
+$$w_i = \frac{1}{\prod_{j \ne i} (x_i - x_j)}$$
 
-das wir als
-
-$$\begin{pmatrix}
-  1 & 0 & 0 \\
-  1 & 1 & 1 \\
-  1 & 2 & 4
-\end{pmatrix}
-\begin{pmatrix}
-  a_0 \\
-  a_1 \\
-  a_2
-\end{pmatrix}
-=
-\begin{pmatrix}
-  -3 \\
-  0 \\ 
-  5
-\end{pmatrix}$$
-
-schreiben können. Dies können wir in Julia und MATLAB durch den Backslash-Operator `\` lösen:
-"""
-
-# ╔═╡ c1a09b07-334b-4a65-854e-27a4c829b956
-V = [1 0 0; 1 1 1; 1 2 4]
-
-# ╔═╡ 0a811e4f-9dcf-4134-9354-bf9687a9e8df
-y = [-3, 0, 5]
-
-# ╔═╡ 8195d230-32ab-4a11-a52b-79913ee37e21
-x = V \ y
-
-# ╔═╡ 5c3760d7-9ef7-4b3d-bf9f-91d36a2b0dcb
-md"""
-Dies liefert uns die Lösung
-
-$$a_0 = -3, \quad a_1 = 2, \quad a_2 = 1,$$
-
-also das Interpolationspolynom $p(x) = x^2 + 2 x - 3$.
-"""
-
-# ╔═╡ cb855bba-8d08-478a-a924-7eb0db84edb2
-md"""
-Weil MATLAB als Standard Zeilen-Vektoren statt Spaltenvektoren verwendet,
-müssen Sie dort `y` mit Semikolon `;` statt Komma `,` schreiben, also
-
-```matlab
-V = [1 0 0; 1 1 1; 1 2 4]
-y = [-3; 0; 5]
-x = V \ y
-```
+zur Polynominterpolation. Obwohl man auf den ersten Blick Probleme
+bei $x \approx x_j$ erwarten würde, ist das Vorgehen stabil. In den folgenden
+Beispielen werten wir die 2. baryzentrische Formel auch an den Stützstellen $x_i$
+sowie den nächst-größeren und -kleineren Fließkommazahlen aus. Außerdem verwenden
+wir verschiedene Datentypen, um die Ergebnisse zu verdeutlichen.
 """
 
 # ╔═╡ 8f3ea0d6-07db-4fa1-bc38-894b612ab592
 md"""
-## Schlechte Kondition des Vorgehens
+## Sinus
+"""
 
-Dieses Vorgehen kann jedoch zu überraschenden Ergebnissen führen.
-Im Folgenden nutzen wir dieses Vorgehen, um $n + 1$ Funktionswerte von
-
-$$f(x) = x^n$$
-
-zu interpolieren. Das eindeutige Interpolationspolynom vom Grad $n$ ist 
-also $p(x) = x^n$. Die Koeffizienten weichen jedoch deutlich davon ab,
-wenn man höhere Werte von $n$ betrachtet.
+# ╔═╡ cca271ad-391a-4232-9a92-52d9bb353cfa
+md"""
+$(@bind T_sin Select([Float32, Float64, Double64]))
 """
 
 # ╔═╡ 8b2539ae-1078-44fc-9374-684920042c22
 md"""
-``n`` = $(@bind n_vandermonde Slider(1:20, default = 20, show_value = true))
+``n`` = $(@bind n_sin Slider(1:20, default = 4, show_value = true))
 """
 
-# ╔═╡ 3b937e13-ea08-41d3-b005-958d2438aab4
-let n = n_vandermonde
-	x = range(0, 1, length = n + 1)
-	f(x) = x^n
-	
-	V = similar(x, length(x), length(x))
-	for j in axes(V, 2), i in axes(V, 1)
-		V[i, j] = x[i]^(j - 1)
-	end
+# ╔═╡ b293a126-5c6c-4156-964b-dce44869dfe4
+md"""
+## Exponentialfunktion
+"""
 
-	c = V \ f.(x)
-end
+# ╔═╡ 45ea347a-4620-4630-b943-524092cf4b51
+md"""
+$(@bind T_exp Select([Float32, Float64, Double64], default = Float64))
+"""
 
-# ╔═╡ 8fb82d54-01f7-4983-a9a7-ffcbceda9b93
-let n = n_vandermonde
-	x_plot = range(0, 1, length = 1_000)
-	x = range(0, 1, length = n + 1)
-	f(x) = x^n
-
-	fig = Figure()
-	ax = Axis(fig[1, 1]; xlabel = L"x", ylabel = L"f(x)")
-	lines!(ax, x_plot, f.(x_plot))
-	scatter!(ax, x, f.(x))
-	
-	fig
-end
+# ╔═╡ f805fe8b-af87-4bf2-af57-09fc9ea1e00c
+md"""
+``n`` = $(@bind n_exp Slider(1:20, default = 4, show_value = true))
+"""
 
 # ╔═╡ 4340e86a-e0fe-4cfe-9d1a-9bb686cbb2fd
 md"""
@@ -179,15 +118,121 @@ _First, we will install (and compile) some packages. This can take a few minutes
 """
 
 
+# ╔═╡ 99c45318-62b5-4ab8-b445-103cab69f0d9
+"""
+	barycentric_weights(x)
+
+Given a vector `x` of nodes, compute the associated barycentric weights.
+"""
+function barycentric_weights(x)
+	Base.require_one_based_indexing(x)
+    w = similar(x)
+    fill!(w, one(eltype(w)))
+    
+    for j in 2:length(x)
+        for k in 1:(j - 1)
+            w[k] *= x[k] - x[j]
+            w[j] *= x[j] - x[k]
+        end
+    end
+    
+    @. w = inv(w)
+    return w
+end
+
+# ╔═╡ 4e9326a3-2af6-45ba-932c-1105a594a555
+"""
+	interpolate(x, nodes, values, weights = barycentric_weights(x))
+
+Compute the value of the interpolation polynomial with data
+`nodes, values` at `x` using the barycentric weights `weights`.
+`x` can be a single number or a vector.
+If `weights` is omitted, the barycentric weights are computed
+on the fly.
+"""
+function interpolate(x::Number, nodes, values, weights)
+    num = den = zero(eltype(values))
+    
+    for j in eachindex(nodes, values, weights)
+		# Although one should in general never compare floating point
+		# number for exact identity, it is okay to do so here.
+		# See Berrut, Trefethen (2004), Higham (2004) and related
+		# references.
+        if x == nodes[j] # not x ≈ nodes[j] !
+            return values[j]
+        else
+            t = weights[j] / (x - nodes[j])
+            num += t * values[j]
+            den += t
+        end
+    end
+    
+    return num / den
+end
+
+# ╔═╡ 8ce71a75-74d8-4cfd-9ca8-42a096576dff
+function interpolate(x, nodes, values, weights)
+    f = similar(x)
+    for i in eachindex(x, f)
+        f[i] = interpolate(x[i], nodes, values, weights)
+    end
+    return f
+end
+
+# ╔═╡ 4b4b7fe0-583f-4653-89b1-780ef645f5b9
+function interpolate(x, nodes, values)
+    weights = barycentric_weights(nodes)
+    return interpolate(x, nodes, values, weights)
+end
+
+# ╔═╡ 088961ba-5915-4f41-8394-e724bc792d20
+function plot_interpolation(f, x; legendpos = :lt)
+	x_plot = range(extrema(x)..., length = 5000)
+	if x_plot[begin] <= 0 <= x_plot[end]
+		x_plot = vcat(x_plot, floatmin(eltype(x_plot)), -floatmin(eltype(x_plot)))
+	end
+	x_plot = sort(vcat(x_plot, x, map(prevfloat, x), map(nextfloat, x)))
+	f_int = interpolate(x_plot, x, f.(x), barycentric_weights(x))
+
+	fig = Figure()
+	ax = Axis(fig[1, 1]; xlabel = L"x")
+	scatter!(ax, x, f.(x); label = L"(x_i, f_i)")
+	lines!(ax, x_plot, f_int; label = "Interpolationspolynom")
+	f_plot = f.(x_plot)
+	lines!(ax, x_plot, f_plot; label = L"f")
+	axislegend(ax; position = legendpos)
+
+	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
+	linkxaxes!(ax, ax_error)
+	max_error = @. abs(f_plot - f_int) + eps(eltype(f_plot))
+	lines!(ax_error, x_plot, max_error; label = "Fehler")
+	
+	return fig
+end
+
+# ╔═╡ a6368e01-97b6-42e1-bdd0-ec074d0880ed
+let n = n_sin, T = T_sin
+	x = range(-T_sin(π), T_sin(π), length = n + 1)
+	plot_interpolation(sin, x)
+end
+
+# ╔═╡ b843718d-33a0-4d25-862b-fb59b12c2d79
+let n = n_exp, T = T_exp
+	x = range(zero(T), one(T), length = n + 1)
+	plot_interpolation(exp, x)
+end
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DoubleFloats = "497a8b3b-efae-58df-a0af-a86822472b78"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
 CairoMakie = "~0.13.2"
+DoubleFloats = "~1.4.3"
 LaTeXStrings = "~1.4.0"
 PlutoUI = "~0.7.62"
 """
@@ -198,7 +243,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.9"
 manifest_format = "2.0"
-project_hash = "63bbd8e3429d400173596823a5087cb5784c055d"
+project_hash = "b3b31eb438fcc9d35bce41fe89c7e7a5b000d405"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -442,6 +487,12 @@ git-tree-sha1 = "e7b7e6f178525d17c720ab9c081e4ef04429f860"
 uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 version = "0.9.4"
 
+[[deps.DoubleFloats]]
+deps = ["GenericLinearAlgebra", "LinearAlgebra", "Polynomials", "Printf", "Quadmath", "Random", "Requires", "SpecialFunctions"]
+git-tree-sha1 = "1ee9bc92a6b862a5ad556c52a3037249209bec1a"
+uuid = "497a8b3b-efae-58df-a0af-a86822472b78"
+version = "1.4.3"
+
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
@@ -577,6 +628,16 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "846f7026a9decf3679419122b49f8a1fdb48d2d5"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
 version = "1.0.16+0"
+
+[[deps.Future]]
+deps = ["Random"]
+uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
+
+[[deps.GenericLinearAlgebra]]
+deps = ["LinearAlgebra", "Printf", "Random", "libblastrampoline_jll"]
+git-tree-sha1 = "54ee4866eb8c982ee23cf79230ca0aaf916c382b"
+uuid = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
+version = "0.3.15"
 
 [[deps.GeoFormatTypes]]
 git-tree-sha1 = "8e233d5167e63d708d41f87597433f59a0f213fe"
@@ -754,16 +815,12 @@ version = "0.22.28"
 git-tree-sha1 = "dba9ddf07f77f60450fe5d2e2beb9854d9a49bd0"
 uuid = "8197267c-284f-5f27-9208-e0e47529a953"
 version = "0.7.10"
+weakdeps = ["Random", "RecipesBase", "Statistics"]
 
     [deps.IntervalSets.extensions]
     IntervalSetsRandomExt = "Random"
     IntervalSetsRecipesBaseExt = "RecipesBase"
     IntervalSetsStatisticsExt = "Statistics"
-
-    [deps.IntervalSets.weakdeps]
-    Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-    RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-    Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[deps.InverseFunctions]]
 git-tree-sha1 = "a779299d77cd080bf77b97535acecd73e1c5e5cb"
@@ -1191,6 +1248,24 @@ git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
 uuid = "647866c9-e3ac-4575-94e7-e3d426903924"
 version = "0.1.2"
 
+[[deps.Polynomials]]
+deps = ["LinearAlgebra", "OrderedCollections", "RecipesBase", "Requires", "Setfield", "SparseArrays"]
+git-tree-sha1 = "555c272d20fc80a2658587fb9bbda60067b93b7c"
+uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+version = "4.0.19"
+
+    [deps.Polynomials.extensions]
+    PolynomialsChainRulesCoreExt = "ChainRulesCore"
+    PolynomialsFFTWExt = "FFTW"
+    PolynomialsMakieCoreExt = "MakieCore"
+    PolynomialsMutableArithmeticsExt = "MutableArithmetics"
+
+    [deps.Polynomials.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+    MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
+    MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
+
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
 git-tree-sha1 = "5aa36f7049a63a1528fe8f7c3f2113413ffd4e1f"
@@ -1236,6 +1311,12 @@ version = "2.11.2"
     [deps.QuadGK.weakdeps]
     Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 
+[[deps.Quadmath]]
+deps = ["Compat", "Printf", "Random", "Requires"]
+git-tree-sha1 = "a03445b1a295fa37027ab23e8ff9a74b350f3fe2"
+uuid = "be4d8f0f-7fa4-5f49-b795-2f01399ab2dd"
+version = "0.5.11"
+
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
@@ -1258,6 +1339,12 @@ weakdeps = ["FixedPointNumbers"]
 
     [deps.Ratios.extensions]
     RatiosFixedPointNumbersExt = "FixedPointNumbers"
+
+[[deps.RecipesBase]]
+deps = ["PrecompileTools"]
+git-tree-sha1 = "5c3d09cc4f31f5fc6af001c250bf1278733100ff"
+uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+version = "1.3.4"
 
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
@@ -1311,6 +1398,12 @@ version = "1.2.1"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+
+[[deps.Setfield]]
+deps = ["ConstructionBase", "Future", "MacroTools", "StaticArraysCore"]
+git-tree-sha1 = "c5391c6ace3bc430ca630251d02ea9687169ca68"
+uuid = "efcf1570-3423-57d1-acb7-fd33fddbac46"
+version = "1.1.2"
 
 [[deps.ShaderAbstractions]]
 deps = ["ColorTypes", "FixedPointNumbers", "GeometryBasics", "LinearAlgebra", "Observables", "StaticArrays"]
@@ -1711,15 +1804,14 @@ version = "3.6.0+0"
 
 # ╔═╡ Cell order:
 # ╟─e6c64c80-773b-11ef-2379-bf6609137e69
-# ╠═c1a09b07-334b-4a65-854e-27a4c829b956
-# ╠═0a811e4f-9dcf-4134-9354-bf9687a9e8df
-# ╠═8195d230-32ab-4a11-a52b-79913ee37e21
-# ╟─5c3760d7-9ef7-4b3d-bf9f-91d36a2b0dcb
-# ╟─cb855bba-8d08-478a-a924-7eb0db84edb2
 # ╟─8f3ea0d6-07db-4fa1-bc38-894b612ab592
-# ╠═8b2539ae-1078-44fc-9374-684920042c22
-# ╟─3b937e13-ea08-41d3-b005-958d2438aab4
-# ╟─8fb82d54-01f7-4983-a9a7-ffcbceda9b93
+# ╟─cca271ad-391a-4232-9a92-52d9bb353cfa
+# ╟─8b2539ae-1078-44fc-9374-684920042c22
+# ╟─a6368e01-97b6-42e1-bdd0-ec074d0880ed
+# ╟─b293a126-5c6c-4156-964b-dce44869dfe4
+# ╟─45ea347a-4620-4630-b943-524092cf4b51
+# ╟─f805fe8b-af87-4bf2-af57-09fc9ea1e00c
+# ╟─b843718d-33a0-4d25-862b-fb59b12c2d79
 # ╟─96351793-9bcc-4376-9c95-b6b42f061ad8
 # ╟─bc148aac-1ef7-4611-b187-72f1255ff05f
 # ╟─92377a23-ac4f-4d5f-9d57-a0a03693307c
@@ -1729,5 +1821,11 @@ version = "3.6.0+0"
 # ╠═f05a5972-58b1-4788-a0a8-24966d6714da
 # ╠═a6fe9276-2d42-4329-b47f-0f55dd857a6c
 # ╠═2f2ccf7b-78f3-4a10-bb77-7bdd5ebd8f2a
+# ╠═b7d3c924-af00-4c9f-97d2-d458a658ce86
+# ╠═99c45318-62b5-4ab8-b445-103cab69f0d9
+# ╠═4e9326a3-2af6-45ba-932c-1105a594a555
+# ╠═8ce71a75-74d8-4cfd-9ca8-42a096576dff
+# ╠═4b4b7fe0-583f-4653-89b1-780ef645f5b9
+# ╠═088961ba-5915-4f41-8394-e724bc792d20
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
