@@ -94,6 +94,18 @@ $$a_0 = -3, \quad a_1 = 2, \quad a_2 = 1,$$
 also das Interpolationspolynom $p(x) = x^2 + 2 x - 3$.
 """
 
+# ╔═╡ cb855bba-8d08-478a-a924-7eb0db84edb2
+md"""
+Weil MATLAB als Standard Zeilen-Vektoren statt Spaltenvektoren verwendet,
+müssen Sie dort `y` mit Semikolon `;` statt Komma `,` schreiben, also
+
+```matlab
+V = [1 0 0; 1 1 1; 1 2 4]
+y = [-3; 0; 5]
+x = V \ y
+```
+"""
+
 # ╔═╡ 8f3ea0d6-07db-4fa1-bc38-894b612ab592
 md"""
 ## Schlechte Kondition des Vorgehens
@@ -1703,6 +1715,7 @@ version = "3.6.0+0"
 # ╠═0a811e4f-9dcf-4134-9354-bf9687a9e8df
 # ╠═8195d230-32ab-4a11-a52b-79913ee37e21
 # ╟─5c3760d7-9ef7-4b3d-bf9f-91d36a2b0dcb
+# ╟─cb855bba-8d08-478a-a924-7eb0db84edb2
 # ╟─8f3ea0d6-07db-4fa1-bc38-894b612ab592
 # ╟─8b2539ae-1078-44fc-9374-684920042c22
 # ╟─3b937e13-ea08-41d3-b005-958d2438aab4
