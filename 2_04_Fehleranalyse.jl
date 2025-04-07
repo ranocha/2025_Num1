@@ -38,119 +38,33 @@ using LaTeXStrings
 
 # ╔═╡ e6c64c80-773b-11ef-2379-bf6609137e69
 md"""
-# 2.1 Polynominterpolation
+# 2.4 Fehleranalyse der Polynominterpolation
 
-Als erstes betrachten wir das Beispiel aus der Vorlesung:
+Hier visualisieren wir den Fehler der Polynominterpolation an äquidistanten
+Stützstellen sowie die zueghörige Abschätzung mithilfe des Knotenpolynoms
 
-> Bestimmen Sie eine Parabel, die durch die Punkte $(0, -3)$, $(1, 0)$ und $(2, 5)$ verläuft.
-
-Das Vorgehen dort führt auf das lineare Gleichungssystem
-
-$$\begin{equation*}
-  \begin{aligned}
-    p(0) &= a_0 = -3, \\
-    p(1) &= a_2 + a_1 + a_0 = 0, \\
-    p(2) &= 4 a_2 + 2 a_1 + a_0 = 5,
-  \end{aligned}
-  \end{equation*}$$
-
-das wir als
-
-$$\begin{pmatrix}
-  1 & 0 & 0 \\
-  1 & 1 & 1 \\
-  1 & 2 & 4
-\end{pmatrix}
-\begin{pmatrix}
-  a_0 \\
-  a_1 \\
-  a_2
-\end{pmatrix}
-=
-\begin{pmatrix}
-  -3 \\
-  0 \\ 
-  5
-\end{pmatrix}$$
-
-schreiben können. Dies können wir in Julia und MATLAB durch den Backslash-Operator `\` lösen:
+$$\omega(x) = \prod_{i=0}^n (x - x_i).$$
 """
-
-# ╔═╡ c1a09b07-334b-4a65-854e-27a4c829b956
-V = [1 0 0; 1 1 1; 1 2 4]
-
-# ╔═╡ 0a811e4f-9dcf-4134-9354-bf9687a9e8df
-y = [-3, 0, 5]
-
-# ╔═╡ 8195d230-32ab-4a11-a52b-79913ee37e21
-x = V \ y
 
 # ╔═╡ 5c3760d7-9ef7-4b3d-bf9f-91d36a2b0dcb
 md"""
-Dies liefert uns die Lösung
-
-$$a_0 = -3, \quad a_1 = 2, \quad a_2 = 1,$$
-
-also das Interpolationspolynom $p(x) = x^2 + 2 x - 3$.
+## Sinus
 """
 
-# ╔═╡ cb855bba-8d08-478a-a924-7eb0db84edb2
+# ╔═╡ a84beaa2-7d25-41f8-a97d-5b48f4e5a5aa
 md"""
-Weil MATLAB als Standard Zeilen-Vektoren statt Spaltenvektoren verwendet,
-müssen Sie dort `y` mit Semikolon `;` statt Komma `,` schreiben, also
-
-```matlab
-V = [1 0 0; 1 1 1; 1 2 4]
-y = [-3; 0; 5]
-x = V \ y
-```
+``n`` = $(@bind n_sin Slider(1:20, default = 9, show_value = true))
 """
 
-# ╔═╡ 8f3ea0d6-07db-4fa1-bc38-894b612ab592
+# ╔═╡ bca10b50-5c8b-498e-b1a9-d7cdc3b60819
 md"""
-## Schlechte Kondition des Vorgehens
-
-Dieses Vorgehen kann jedoch zu überraschenden Ergebnissen führen.
-Im Folgenden nutzen wir dieses Vorgehen, um $n + 1$ Funktionswerte von
-
-$$f(x) = x^n$$
-
-zu interpolieren. Das eindeutige Interpolationspolynom vom Grad $n$ ist 
-also $p(x) = x^n$. Die Koeffizienten weichen jedoch deutlich davon ab,
-wenn man höhere Werte von $n$ betrachtet.
+## Exponentialfunktion
 """
 
-# ╔═╡ 8b2539ae-1078-44fc-9374-684920042c22
+# ╔═╡ 02caccc4-b379-499f-b307-5711bf78d64e
 md"""
-``n`` = $(@bind n_vandermonde Slider(1:20, default = 20, show_value = true))
+``n`` = $(@bind n_exp Slider(1:20, default = 5, show_value = true))
 """
-
-# ╔═╡ 3b937e13-ea08-41d3-b005-958d2438aab4
-let n = n_vandermonde
-	x = range(0, 1, length = n + 1)
-	f(x) = x^n
-	
-	V = similar(x, length(x), length(x))
-	for j in axes(V, 2), i in axes(V, 1)
-		V[i, j] = x[i]^(j - 1)
-	end
-
-	c = V \ f.(x)
-end
-
-# ╔═╡ 8fb82d54-01f7-4983-a9a7-ffcbceda9b93
-let n = n_vandermonde
-	x_plot = range(0, 1, length = 1_000)
-	x = range(0, 1, length = n + 1)
-	f(x) = x^n
-
-	fig = Figure()
-	ax = Axis(fig[1, 1]; xlabel = L"x", ylabel = L"f(x)")
-	lines!(ax, x_plot, f.(x_plot))
-	scatter!(ax, x, f.(x))
-	
-	fig
-end
 
 # ╔═╡ 4340e86a-e0fe-4cfe-9d1a-9bb686cbb2fd
 md"""
@@ -178,6 +92,129 @@ md"""
 _First, we will install (and compile) some packages. This can take a few minutes when  running this notebook for the first time._
 """
 
+
+# ╔═╡ 0721e242-9c29-4840-857b-b04c99efdf58
+"""
+	barycentric_weights(x)
+
+Given a vector `x` of nodes, compute the associated barycentric weights.
+"""
+function barycentric_weights(x)
+	Base.require_one_based_indexing(x)
+    w = similar(x)
+    fill!(w, one(eltype(w)))
+    
+    for j in 2:length(x)
+        for k in 1:(j - 1)
+            w[k] *= x[k] - x[j]
+            w[j] *= x[j] - x[k]
+        end
+    end
+    
+    @. w = inv(w)
+    return w
+end
+
+# ╔═╡ 8138376b-2d90-401e-a1d2-24291e7445b5
+"""
+	interpolate(x, nodes, values, weights = barycentric_weights(x))
+
+Compute the value of the interpolation polynomial with data
+`nodes, values` at `x` using the barycentric weights `weights`.
+`x` can be a single number or a vector.
+If `weights` is omitted, the barycentric weights are computed
+on the fly.
+"""
+function interpolate(x::Number, nodes, values, weights)
+    num = den = zero(eltype(values))
+    
+    for j in eachindex(nodes, values, weights)
+		# Although one should in general never compare floating point
+		# number for exact identity, it is okay to do so here.
+		# See Berrut, Trefethen (2004), Higham (2004) and related
+		# references.
+        if x == nodes[j] # not x ≈ nodes[j] !
+            return values[j]
+        else
+            t = weights[j] / (x - nodes[j])
+            num += t * values[j]
+            den += t
+        end
+    end
+    
+    return num / den
+end
+
+# ╔═╡ 84ece4e4-6166-4122-a230-0ca2677f37f2
+function interpolate(x, nodes, values, weights)
+    f = similar(x)
+    for i in eachindex(x, f)
+        f[i] = interpolate(x[i], nodes, values, weights)
+    end
+    return f
+end
+
+# ╔═╡ f900259a-6e46-4673-91b2-96cdb4322d00
+function interpolate(x, nodes, values)
+    weights = barycentric_weights(nodes)
+    return interpolate(x, nodes, values, weights)
+end
+
+# ╔═╡ 18b9502a-3459-4500-814e-c78cf8e7a1f3
+"""
+	node_polynomial(x::Number, nodes)
+
+Compute the node polynomial associated to the `nodes` at `x`.
+"""
+function node_polynomial(x::Number, nodes)
+	val = one(x)
+	for xi in nodes
+		val *= (x - xi)
+	end
+	return val
+end
+
+# ╔═╡ 6d46d825-662b-48ef-ac25-876d292b9d8f
+function plot_interpolation_error(f, x; legendpos = :lt)
+	x_plot = range(extrema(x)..., length = 5000)
+	if x_plot[begin] <= 0 <= x_plot[end]
+		x_plot = vcat(x_plot, floatmin(eltype(x_plot)), -floatmin(eltype(x_plot)))
+	end
+	x_plot = sort(vcat(x_plot, x, map(prevfloat, x), map(nextfloat, x)))
+	f_int = interpolate(x_plot, x, f.(x), barycentric_weights(x))
+
+	fig = Figure()
+	ax = Axis(fig[1, 1]; xlabel = L"x")
+	scatter!(ax, x, f.(x); label = L"(x_i, f_i)")
+	lines!(ax, x_plot, f_int; label = "Interpolationspolynom")
+	f_plot = f.(x_plot)
+	lines!(ax, x_plot, f_plot; label = L"f")
+	axislegend(ax; position = legendpos)
+
+
+	ax_error = Axis(fig[2, 1]; xlabel = L"x", yscale = log10)
+	linkxaxes!(ax, ax_error)
+	max_error = @. abs(f_plot - f_int) + eps(eltype(f_plot))
+	lines!(ax_error, x_plot, max_error; label = L"|f(x) - p(x)|")
+	estimate = abs.(node_polynomial.(x_plot, (x,))) /
+				factorial(length(x))
+	lines!(ax_error, x_plot, estimate; label = L"|\omega(x)| / (n + 1)!")
+	axislegend(ax_error; position = legendpos)
+	
+	return fig
+end
+
+# ╔═╡ 63df47b9-093a-48d4-8d0c-d6a4f4d065e1
+let n = n_sin, T = Float64
+	x = range(-T(π), T(π), length = n + 1)
+	plot_interpolation_error(sin, x, legendpos = :rb)
+end
+
+# ╔═╡ 93ca154f-d050-489b-ac4d-4b196526aad6
+let n = n_exp, T = Float64
+	x = range(zero(T), one(T), length = n + 1)
+	plot_interpolation_error(exp, x, legendpos = :rb)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1711,15 +1748,12 @@ version = "3.6.0+0"
 
 # ╔═╡ Cell order:
 # ╟─e6c64c80-773b-11ef-2379-bf6609137e69
-# ╠═c1a09b07-334b-4a65-854e-27a4c829b956
-# ╠═0a811e4f-9dcf-4134-9354-bf9687a9e8df
-# ╠═8195d230-32ab-4a11-a52b-79913ee37e21
 # ╟─5c3760d7-9ef7-4b3d-bf9f-91d36a2b0dcb
-# ╟─cb855bba-8d08-478a-a924-7eb0db84edb2
-# ╟─8f3ea0d6-07db-4fa1-bc38-894b612ab592
-# ╟─8b2539ae-1078-44fc-9374-684920042c22
-# ╟─3b937e13-ea08-41d3-b005-958d2438aab4
-# ╟─8fb82d54-01f7-4983-a9a7-ffcbceda9b93
+# ╟─a84beaa2-7d25-41f8-a97d-5b48f4e5a5aa
+# ╟─63df47b9-093a-48d4-8d0c-d6a4f4d065e1
+# ╟─bca10b50-5c8b-498e-b1a9-d7cdc3b60819
+# ╟─02caccc4-b379-499f-b307-5711bf78d64e
+# ╟─93ca154f-d050-489b-ac4d-4b196526aad6
 # ╟─96351793-9bcc-4376-9c95-b6b42f061ad8
 # ╟─bc148aac-1ef7-4611-b187-72f1255ff05f
 # ╟─92377a23-ac4f-4d5f-9d57-a0a03693307c
@@ -1729,5 +1763,11 @@ version = "3.6.0+0"
 # ╠═f05a5972-58b1-4788-a0a8-24966d6714da
 # ╠═a6fe9276-2d42-4329-b47f-0f55dd857a6c
 # ╠═2f2ccf7b-78f3-4a10-bb77-7bdd5ebd8f2a
+# ╠═0721e242-9c29-4840-857b-b04c99efdf58
+# ╠═8138376b-2d90-401e-a1d2-24291e7445b5
+# ╠═84ece4e4-6166-4122-a230-0ca2677f37f2
+# ╠═f900259a-6e46-4673-91b2-96cdb4322d00
+# ╠═18b9502a-3459-4500-814e-c78cf8e7a1f3
+# ╠═6d46d825-662b-48ef-ac25-876d292b9d8f
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

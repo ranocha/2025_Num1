@@ -212,7 +212,7 @@ end
 
 # ╔═╡ a6368e01-97b6-42e1-bdd0-ec074d0880ed
 let n = n_sin, T = T_sin
-	x = range(-T_sin(π), T_sin(π), length = n + 1)
+	x = range(-T(π), T(π), length = n + 1)
 	plot_interpolation(sin, x)
 end
 
