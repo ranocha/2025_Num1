@@ -36,22 +36,56 @@ end
 # ╔═╡ 2f2ccf7b-78f3-4a10-bb77-7bdd5ebd8f2a
 using LaTeXStrings
 
-# ╔═╡ 4e6cf0ce-b762-41cf-ae13-81873ee8695b
+# ╔═╡ 44b1f12e-95c7-46e4-b745-f8031f6d0106
 using SpecialFunctions: gamma
+
+# ╔═╡ 770403a3-6ee2-49ef-9b73-3715f9e10467
+using TaylorSeries
 
 # ╔═╡ e6c64c80-773b-11ef-2379-bf6609137e69
 md"""
-# 2.4 Fehleranalyse der Polynominterpolation
+# 2.5 Chebyshev-Polynome
 
-Hier visualisieren wir den Fehler der Polynominterpolation an äquidistanten
-Stützstellen sowie die zueghörige Abschätzung mithilfe des Knotenpolynoms
+Die Chebyshev-Polynome sind definiert durch
 
-$$\omega(x) = \prod_{i=0}^n (x - x_i).$$
+$$T_n(x) :=\cos\bigl( n \arccos(x) \bigr), \quad x \in [-1, 1].$$
+
+Sie können effizient durch die Dreitermkerursion
+
+$$T_{n+1}(x) = 2 x T_{n}(x) - T_{n-1}(x)$$
+
+mit den Anfangswerten $T_0(x) = 1$ und $T_1(x) = x$ ausgewertet werden.
+Als erstes visualisieren wir die ersten paar Chebyshev-Polynome.
 """
+
+# ╔═╡ 737fc5bd-84dc-4873-a741-df5ba70a0393
+let n = 5
+	
+	x = range(-1, 1, length = 1000)
+	Tn = similar(x, (length(x), n + 1))
+	Tn[:, 1] = @. one(x)
+	Tn[:, 2] = x
+	for k in 3:(n + 1)
+		@views @. Tn[:, k] = 2 * x * Tn[:, k - 1] - Tn[:, k - 2]
+	end
+
+	fig = Figure()
+	ax_linear = Axis(fig[1, 1]; xlabel = L"x")
+	for k in axes(Tn, 2)
+		lines!(ax_linear, Tn[:, k]; label = L"T_%$(k - 1)")
+	end
+	# axislegend(ax_linear)
+	fig[1, 2] = Legend(fig, ax_linear, framevisible = false)
+	
+	fig
+end
 
 # ╔═╡ 5c3760d7-9ef7-4b3d-bf9f-91d36a2b0dcb
 md"""
 ## Sinus
+
+Als nächstes betrachten wir das Interpolationspolynom von Funktionen, die wir
+schon bei der Interpolation mit äquidistanten Stützstellen betrachtet haben.
 """
 
 # ╔═╡ a84beaa2-7d25-41f8-a97d-5b48f4e5a5aa
@@ -59,14 +93,117 @@ md"""
 ``n`` = $(@bind n_sin Slider(1:20, default = 9, show_value = true))
 """
 
-# ╔═╡ bca10b50-5c8b-498e-b1a9-d7cdc3b60819
+# ╔═╡ b4162007-8c09-48c9-b3e3-bed1b95d4d00
 md"""
 ## Exponentialfunktion
 """
 
-# ╔═╡ 02caccc4-b379-499f-b307-5711bf78d64e
+# ╔═╡ fa0d8a3b-dd67-41c1-9600-9c1e9fc5b719
 md"""
 ``n`` = $(@bind n_exp Slider(1:20, default = 5, show_value = true))
+"""
+
+# ╔═╡ 85568719-bfeb-41c5-a04b-16e1eea442b9
+md"""
+## Runge-Funktion
+
+Jetzt betrachten wir die sogenannte *Runge-Funktion*
+
+$$f(x) = \frac{1}{1 + 25 x^2}$$
+
+im Intervall $[-1, 1]$ mit äquidistanten Stützstellen.
+"""
+
+# ╔═╡ 12b1a335-5d4c-4b56-9f7e-69e0153cce02
+md"""
+``n`` = $(@bind n_runge1 Slider(1:50, default = 15, show_value = true))
+"""
+
+# ╔═╡ bdce9841-1c95-49ca-b589-36ff85ca598c
+md"""
+Das Interpolationspolynom divergiert offensichtlich. Wenn wir stattdessen
+Chebyshev-Nullstellen verwenden, sieht das Ergebnis viel besser aus.
+"""
+
+# ╔═╡ dbaff7bc-c319-4fbf-9813-abb0a70d8373
+md"""
+``n`` = $(@bind n_runge2 Slider(1:200, default = 15, show_value = true))
+"""
+
+# ╔═╡ ecb8c5a7-4e69-4b2c-bd52-6baa688f5e39
+md"""
+## Vergleich mit der Taylor-Entwicklung
+
+Als nächstes vergleichen wir das Ergebnis der Polynominterpolation an
+Chebyshev-Extremstellen mit der Taylor-Entwicklung um $x_0 = 0$ der glatten Funktion
+
+$$f\colon [-1, 1] \to \mathbb{R}, \qquad f(x) = \mathrm{e}^{\sin(x)}.$$
+"""
+
+# ╔═╡ 2d4aa703-e3e1-4463-b525-e3294e2dd4a8
+md"""
+``n`` = $(@bind n_expsinpi Slider(1:100, default = 10, show_value = true))
+"""
+
+# ╔═╡ 12f95634-b34b-4f0e-a8f9-72543d922868
+md"""
+Hier können wir mehrere typische Verhalten erkennen:
+- Die Polynominterpolation an Chebyshev-Extremstellen ist im gesamten Intervall gut während die Taylor-Approximation vor allem nahe des Entwicklungspunktes gut ist.
+- Dicht beim Entwicklungspunkt ist die Taylor-Approximation besser als die Chebyshev-Approximation, weiter davon entfernt ist es genau anders - mit zum Teil großen Fehlern der Taylor-Approximation am Rand des Intervalls.
+- Beide Approximationen scheinen gegen die Funktion $f$ zu konvergieren.
+"""
+
+# ╔═╡ 80768e73-efbf-455e-a6bf-e3f6b994d692
+md"""
+## Eine stetige aber nicht überall stetig-differenzierbare Funktion
+
+Wir betrachten die Funktion
+
+$$f\colon [-1, 1] \to \mathbb{R}, \qquad f(x) = \begin{cases}
+	\cos(\pi x), & -\frac{1}{2} \le x \le \frac{1}{2}, \\
+	0, & \text{sonst},
+\end{cases}$$
+
+und verwenden $x_0 = 0$ für die Taylor-Entwicklung.
+"""
+
+# ╔═╡ e5b515de-06d1-4898-a95e-a09db4453549
+md"""
+``n`` = $(@bind n_cos0 Slider(0:100, default = 10, show_value = true))
+"""
+
+# ╔═╡ 4969f593-c0a1-4957-8903-7c14c2c32b03
+md"""
+Auch hier können wir mehrere typische Verhalten erkennen:
+- Die Taylor-Approximation kann nur den "inneren Teil" gut approximieren.
+- Die Chebyshev-Approximation konvergiert deutlich langsamer als bei der glatten Funktion vorher.
+"""
+
+# ╔═╡ f69d03b4-a820-4eae-a78c-bb1c9b3df8eb
+md"""
+## Eine unstetige Funktion
+
+Wir betrachten die Funktion
+
+$$f\colon [-1, 1] \to \mathbb{R}, \qquad f(x) = \begin{cases}
+	-1, & x < 0, \\
+	0, & x = 0, \\
+	1, & x > 0.
+\end{cases}$$
+
+Da $f$ unstetig ist, betrachten wir keine Taylor-Entwicklung.
+"""
+
+# ╔═╡ 70fb2ad2-3926-4057-abb1-ad49362c2d21
+md"""
+``n`` = $(@bind n_sign Slider(0:500, default = 10, show_value = true))
+"""
+
+# ╔═╡ 13372640-c397-4939-a20f-e19ca0c178c0
+md"""
+Hier können wir ebenfalls einige typische Verhaltensweisen beobachten:
+- Ausreichend weit von der Unstetigkeitsstelle entfernt scheint die Approximation weiterhin punktweise zu konvergieren - allerdings noch langsamer als vorher.
+- Nahe der Unstetigkeitsstelle gibt es immer Über- und Unter-Schwingungen, deren Amplitude nicht abnimmt. Dies ist als [Gibbs'sches Phänomen](https://de.wikipedia.org/wiki/Gibbssches_Phänomen) bekannt.
 """
 
 # ╔═╡ 4340e86a-e0fe-4cfe-9d1a-9bb686cbb2fd
@@ -207,16 +344,187 @@ function plot_interpolation_error(f, x; legendpos = :lt)
 	return fig
 end
 
+# ╔═╡ 4bef46dc-4d75-4850-b8a2-57ae1620a516
+function chebyshev_roots(_a, _b; length)
+	a, b = promote(_a, _b)
+	T = typeof(a)
+	x = [cospi(one(T) * (2 * k - 1) / (2 * length)) for k in length:-1:1]
+	return @. (b - a) / 2 * (x + 1) + a
+end
+
 # ╔═╡ 63df47b9-093a-48d4-8d0c-d6a4f4d065e1
 let n = n_sin, T = Float64
-	x = range(-T(π), T(π), length = n + 1)
+	x = chebyshev_roots(-T(π), T(π), length = n + 1)
 	plot_interpolation_error(sin, x, legendpos = :rb)
 end
 
-# ╔═╡ 93ca154f-d050-489b-ac4d-4b196526aad6
+# ╔═╡ 92a1b169-9418-442d-aad6-0c458c866bc3
 let n = n_exp, T = Float64
-	x = range(zero(T), one(T), length = n + 1)
+	x = chebyshev_roots(zero(T), one(T), length = n + 1)
 	plot_interpolation_error(exp, x, legendpos = :rb)
+end
+
+# ╔═╡ 675deda5-eff9-4287-b288-ea311b729f95
+function chebyshev_extrema(_a, _b; length)
+	a, b = promote(_a, _b)
+	T = typeof(a)
+	x = [cospi(one(T) * k / (length - 1)) for k in (length - 1):-1:0]
+	return @. (b - a) / 2 * (x + 1) + a
+end
+
+# ╔═╡ fc1cdd4d-75df-46d9-a691-64a0b98df2d3
+let f = x -> exp(sin(pi * x)), n = n_expsinpi, x0 = 0.0
+	fig = Figure()
+	ax = Axis(fig[1, 1]; xlabel = L"x")
+
+	nodes = chebyshev_extrema(-1.0, 1.0, length = n + 1)
+	x = range(-1.0, 1.0, step = 1.0e-2)
+	if x[begin] <= 0 <= x[end]
+		x = vcat(x, floatmin(eltype(x)), -floatmin(eltype(x)))
+	end
+	x = sort(vcat(x, nodes, map(prevfloat, nodes), map(nextfloat, nodes)))
+	
+	f_x = @. f(x)
+	lines!(ax, x, f_x; label = L"\exp(\sin(\pi x))", color = :gray)
+
+	taylor = f(Taylor1(n) + x0)
+	taylor_x = @. taylor(x - x0)
+	lines!(ax, x, taylor_x; label = "Taylor", linestyle = :dash)
+
+	chebyshev_x = interpolate(x, nodes, f.(nodes), barycentric_weights(nodes))
+	lines!(ax, x, chebyshev_x; label = "Interpolation", linestyle = :dot)
+
+	ylims!(ax, 0.1, 2.9)
+	axislegend(position = :lt)
+
+	
+	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
+	linkxaxes!(ax, ax_error)
+	
+	max_error = @. abs(f_x - taylor_x) + eps()
+	lines!(ax_error, x, max_error; label = "Taylor", linestyle = :dash)
+	
+	max_error = @. abs(f_x - chebyshev_x) + eps()
+	lines!(ax_error, x, max_error; label = "Interpolation", linestyle = :dot)
+	
+	axislegend(position = :lc)
+
+	fig
+end
+
+# ╔═╡ 1b1e0f42-4066-4385-88b1-42463016ef91
+let f = x -> ifelse(-0.5 <= x <= 0.5, cos(pi * x), 0.0), n = n_cos0, x0 = 0.0
+	fig = Figure()
+	ax = Axis(fig[1, 1]; xlabel = L"x")
+
+	nodes = chebyshev_extrema(-1.0, 1.0, length = n + 1)
+	x = range(-1.0, 1.0, step = 1.0e-2)
+	if x[begin] <= 0 <= x[end]
+		x = vcat(x, floatmin(eltype(x)), -floatmin(eltype(x)))
+	end
+	x = sort(vcat(x, nodes, map(prevfloat, nodes), map(nextfloat, nodes)))
+	
+	f_x = @. f(x)
+	lines!(ax, x, f_x; label = L"f(x)", color = :gray)
+
+	taylor = f(Taylor1(n) + x0)
+	taylor_x = @. taylor(x - x0)
+	lines!(ax, x, taylor_x; label = "Taylor", linestyle = :dash)
+
+	chebyshev_x = interpolate(x, nodes, f.(nodes), barycentric_weights(nodes))
+	lines!(ax, x, chebyshev_x; label = "Interpolation", linestyle = :dot)
+
+	ylims!(ax, -0.1, 1.1)
+	axislegend(position = :lt)
+
+	
+	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
+	linkxaxes!(ax, ax_error)
+	
+	max_error = @. abs(f_x - taylor_x) + eps()
+	lines!(ax_error, x, max_error; label = "Taylor", linestyle = :dash)
+	
+	max_error = @. abs(f_x - chebyshev_x) + eps()
+	lines!(ax_error, x, max_error; label = "Interpolation", linestyle = :dot)
+	
+	axislegend(position = :lc)
+
+	fig
+end
+
+# ╔═╡ 25892baf-c414-47a1-8a3a-308e1b13ce7c
+let f = sign, n = n_sign
+	fig = Figure()
+	ax = Axis(fig[1, 1]; xlabel = L"x")
+
+	nodes = chebyshev_extrema(-1.0, 1.0, length = n + 1)
+	x = range(-1.0, 1.0, step = 1.0e-2)
+	if x[begin] <= 0 <= x[end]
+		x = vcat(x, floatmin(eltype(x)), -floatmin(eltype(x)))
+	end
+	x = sort(vcat(x, nodes, map(prevfloat, nodes), map(nextfloat, nodes)))
+	
+	f_x = @. f(x)
+	idx = findfirst(iszero, x)
+	f_x[idx] = NaN
+	lines!(ax, x, f_x; label = L"f(x)", color = :gray)
+
+	chebyshev_x = interpolate(x, nodes, f.(nodes), barycentric_weights(nodes))
+	lines!(ax, x, chebyshev_x; label = "Interpolation", linestyle = :dot)
+
+	ylims!(ax, -1.3, 1.3)
+	axislegend(position = :lt)
+
+	
+	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
+	linkxaxes!(ax, ax_error)
+	
+	max_error = @. abs(f_x - chebyshev_x) + eps()
+	lines!(ax_error, x, max_error; label = "Interpolation", linestyle = :dot)
+	
+	axislegend(position = :lc)
+
+	fig
+end
+
+# ╔═╡ c569f697-82e0-477f-93bf-d7ce2a12c6d9
+function plot_interpolation_bounded(f, x; legendpos = :lt)
+	x_plot = range(extrema(x)..., length = 5_000)
+	if x_plot[begin] <= 0 <= x_plot[end]
+		x_plot = vcat(x_plot, floatmin(eltype(x_plot)), -floatmin(eltype(x_plot)))
+	end
+	x_plot = sort(vcat(x_plot, x, map(prevfloat, x), map(nextfloat, x)))
+	f_int = interpolate(x_plot, x, f.(x), barycentric_weights(x))
+
+	fig = Figure()
+	ax = Axis(fig[1, 1]; xlabel = L"x")
+	lines!(ax, x_plot, f_int; label = L"p")
+	f_plot = f.(x_plot)
+	lines!(ax, x_plot, f_plot; label = L"f")
+	if length(x) < 100
+		scatter!(ax, x, f.(x); label = L"(x_i, f_i)")
+	end
+	axislegend(ax; position = legendpos)
+	ylims!(ax, -0.1, 1.1)
+
+	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
+	linkxaxes!(ax, ax_error)
+	max_error = @. abs(f_plot - f_int) + eps(eltype(f_plot))
+	lines!(ax_error, x_plot, max_error; label = L"|f(x) - p(x)|")
+	
+	return fig
+end
+
+# ╔═╡ dd485c1c-c8e6-42da-bcc6-d319ae90bacc
+let n = n_runge1, T = Float64
+	x = range(-one(T), one(T), length = n + 1)
+	plot_interpolation_bounded(x -> 1 / (1 + 25 * x^2), x, legendpos = :rb)
+end
+
+# ╔═╡ 6430a6de-8296-4407-b28e-536abb8e8aac
+let n = n_runge2, T = Float64
+	x = chebyshev_roots(-one(T), one(T), length = n + 1)
+	plot_interpolation_bounded(x -> 1 / (1 + 25 * x^2), x, legendpos = :rb)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -226,12 +534,14 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 
 [compat]
 CairoMakie = "~0.13.2"
 LaTeXStrings = "~1.4.0"
 PlutoUI = "~0.7.62"
 SpecialFunctions = "~2.5.0"
+TaylorSeries = "~0.19.1"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -240,7 +550,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.9"
 manifest_format = "2.0"
-project_hash = "a47fddc9e11ccee3beaf75d61a028ca9d075da77"
+project_hash = "2c69e501b00e4238aaaf1634997a5d089cc462ff"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1520,6 +1830,24 @@ deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 version = "1.10.0"
 
+[[deps.TaylorSeries]]
+deps = ["LinearAlgebra", "Markdown", "SparseArrays"]
+git-tree-sha1 = "2c308aab2e14b399e4b8d6af7c486a241c8ca87a"
+uuid = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
+version = "0.19.1"
+
+    [deps.TaylorSeries.extensions]
+    TaylorSeriesIAExt = "IntervalArithmetic"
+    TaylorSeriesJLD2Ext = "JLD2"
+    TaylorSeriesRATExt = "RecursiveArrayTools"
+    TaylorSeriesSAExt = "StaticArrays"
+
+    [deps.TaylorSeries.weakdeps]
+    IntervalArithmetic = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+    JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+    RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
+    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "1feb45f88d133a655e001435632f019a9a1bcdb6"
@@ -1753,12 +2081,31 @@ version = "3.6.0+0"
 
 # ╔═╡ Cell order:
 # ╟─e6c64c80-773b-11ef-2379-bf6609137e69
+# ╟─737fc5bd-84dc-4873-a741-df5ba70a0393
 # ╟─5c3760d7-9ef7-4b3d-bf9f-91d36a2b0dcb
 # ╟─a84beaa2-7d25-41f8-a97d-5b48f4e5a5aa
 # ╟─63df47b9-093a-48d4-8d0c-d6a4f4d065e1
-# ╟─bca10b50-5c8b-498e-b1a9-d7cdc3b60819
-# ╟─02caccc4-b379-499f-b307-5711bf78d64e
-# ╟─93ca154f-d050-489b-ac4d-4b196526aad6
+# ╟─b4162007-8c09-48c9-b3e3-bed1b95d4d00
+# ╟─fa0d8a3b-dd67-41c1-9600-9c1e9fc5b719
+# ╟─92a1b169-9418-442d-aad6-0c458c866bc3
+# ╟─85568719-bfeb-41c5-a04b-16e1eea442b9
+# ╟─12b1a335-5d4c-4b56-9f7e-69e0153cce02
+# ╟─dd485c1c-c8e6-42da-bcc6-d319ae90bacc
+# ╟─bdce9841-1c95-49ca-b589-36ff85ca598c
+# ╟─dbaff7bc-c319-4fbf-9813-abb0a70d8373
+# ╟─6430a6de-8296-4407-b28e-536abb8e8aac
+# ╟─ecb8c5a7-4e69-4b2c-bd52-6baa688f5e39
+# ╟─2d4aa703-e3e1-4463-b525-e3294e2dd4a8
+# ╟─fc1cdd4d-75df-46d9-a691-64a0b98df2d3
+# ╟─12f95634-b34b-4f0e-a8f9-72543d922868
+# ╟─80768e73-efbf-455e-a6bf-e3f6b994d692
+# ╟─e5b515de-06d1-4898-a95e-a09db4453549
+# ╟─1b1e0f42-4066-4385-88b1-42463016ef91
+# ╟─4969f593-c0a1-4957-8903-7c14c2c32b03
+# ╟─f69d03b4-a820-4eae-a78c-bb1c9b3df8eb
+# ╟─70fb2ad2-3926-4057-abb1-ad49362c2d21
+# ╟─25892baf-c414-47a1-8a3a-308e1b13ce7c
+# ╟─13372640-c397-4939-a20f-e19ca0c178c0
 # ╟─96351793-9bcc-4376-9c95-b6b42f061ad8
 # ╟─bc148aac-1ef7-4611-b187-72f1255ff05f
 # ╟─92377a23-ac4f-4d5f-9d57-a0a03693307c
@@ -1768,12 +2115,16 @@ version = "3.6.0+0"
 # ╠═f05a5972-58b1-4788-a0a8-24966d6714da
 # ╠═a6fe9276-2d42-4329-b47f-0f55dd857a6c
 # ╠═2f2ccf7b-78f3-4a10-bb77-7bdd5ebd8f2a
-# ╠═4e6cf0ce-b762-41cf-ae13-81873ee8695b
+# ╠═44b1f12e-95c7-46e4-b745-f8031f6d0106
+# ╠═770403a3-6ee2-49ef-9b73-3715f9e10467
 # ╠═0721e242-9c29-4840-857b-b04c99efdf58
 # ╠═8138376b-2d90-401e-a1d2-24291e7445b5
 # ╠═84ece4e4-6166-4122-a230-0ca2677f37f2
 # ╠═f900259a-6e46-4673-91b2-96cdb4322d00
 # ╠═18b9502a-3459-4500-814e-c78cf8e7a1f3
 # ╠═6d46d825-662b-48ef-ac25-876d292b9d8f
+# ╠═4bef46dc-4d75-4850-b8a2-57ae1620a516
+# ╠═675deda5-eff9-4287-b288-ea311b729f95
+# ╠═c569f697-82e0-477f-93bf-d7ce2a12c6d9
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
