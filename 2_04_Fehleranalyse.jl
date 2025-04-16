@@ -46,7 +46,7 @@ md"""
 Hier visualisieren wir den Fehler der Polynominterpolation an äquidistanten
 Stützstellen sowie die zueghörige Abschätzung mithilfe des Knotenpolynoms
 
-$$\omega(x) = \prod_{i=0}^n (x - x_i).$$
+$$\lambda(x) = \prod_{i=0}^n (x - x_i).$$
 """
 
 # ╔═╡ 5c3760d7-9ef7-4b3d-bf9f-91d36a2b0dcb
@@ -106,14 +106,14 @@ function barycentric_weights(x)
 	Base.require_one_based_indexing(x)
     w = similar(x)
     fill!(w, one(eltype(w)))
-    
+
     for j in 2:length(x)
         for k in 1:(j - 1)
             w[k] *= x[k] - x[j]
             w[j] *= x[j] - x[k]
         end
     end
-    
+
     @. w = inv(w)
     return w
 end
@@ -130,7 +130,7 @@ on the fly.
 """
 function interpolate(x::Number, nodes, values, weights)
     num = den = zero(eltype(values))
-    
+
     for j in eachindex(nodes, values, weights)
 		# Although one should in general never compare floating point
 		# number for exact identity, it is okay to do so here.
@@ -144,7 +144,7 @@ function interpolate(x::Number, nodes, values, weights)
             den += t
         end
     end
-    
+
     return num / den
 end
 
@@ -201,9 +201,9 @@ function plot_interpolation_error(f, x; legendpos = :lt)
 	lines!(ax_error, x_plot, max_error; label = L"|f(x) - p(x)|")
 	estimate = abs.(node_polynomial.(x_plot, (x,))) /
 				gamma(length(x) + 1) # Γ(n + 1) = n!
-	lines!(ax_error, x_plot, estimate; label = L"|\omega(x)| / (n + 1)!")
+	lines!(ax_error, x_plot, estimate; label = L"|\lambda(x)| / (n + 1)!")
 	axislegend(ax_error; position = legendpos)
-	
+
 	return fig
 end
 

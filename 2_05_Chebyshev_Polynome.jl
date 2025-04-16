@@ -60,7 +60,7 @@ Als erstes visualisieren wir die ersten paar Chebyshev-Polynome.
 
 # ╔═╡ 737fc5bd-84dc-4873-a741-df5ba70a0393
 let n = 5
-	
+
 	x = range(-1, 1, length = 1000)
 	Tn = similar(x, (length(x), n + 1))
 	Tn[:, 1] = @. one(x)
@@ -76,7 +76,7 @@ let n = 5
 	end
 	# axislegend(ax_linear)
 	fig[1, 2] = Legend(fig, ax_linear, framevisible = false)
-	
+
 	fig
 end
 
@@ -243,14 +243,14 @@ function barycentric_weights(x)
 	Base.require_one_based_indexing(x)
     w = similar(x)
     fill!(w, one(eltype(w)))
-    
+
     for j in 2:length(x)
         for k in 1:(j - 1)
             w[k] *= x[k] - x[j]
             w[j] *= x[j] - x[k]
         end
     end
-    
+
     @. w = inv(w)
     return w
 end
@@ -267,7 +267,7 @@ on the fly.
 """
 function interpolate(x::Number, nodes, values, weights)
     num = den = zero(eltype(values))
-    
+
     for j in eachindex(nodes, values, weights)
 		# Although one should in general never compare floating point
 		# number for exact identity, it is okay to do so here.
@@ -281,7 +281,7 @@ function interpolate(x::Number, nodes, values, weights)
             den += t
         end
     end
-    
+
     return num / den
 end
 
@@ -338,9 +338,9 @@ function plot_interpolation_error(f, x; legendpos = :lt)
 	lines!(ax_error, x_plot, max_error; label = L"|f(x) - p(x)|")
 	estimate = abs.(node_polynomial.(x_plot, (x,))) /
 				gamma(length(x) + 1) # Γ(n + 1) = n!
-	lines!(ax_error, x_plot, estimate; label = L"|\omega(x)| / (n + 1)!")
+	lines!(ax_error, x_plot, estimate; label = L"|\lambda(x)| / (n + 1)!")
 	axislegend(ax_error; position = legendpos)
-	
+
 	return fig
 end
 
@@ -383,7 +383,7 @@ let f = x -> exp(sin(pi * x)), n = n_expsinpi, x0 = 0.0
 		x = vcat(x, floatmin(eltype(x)), -floatmin(eltype(x)))
 	end
 	x = sort(vcat(x, nodes, map(prevfloat, nodes), map(nextfloat, nodes)))
-	
+
 	f_x = @. f(x)
 	lines!(ax, x, f_x; label = L"\exp(\sin(\pi x))", color = :gray)
 
@@ -397,16 +397,16 @@ let f = x -> exp(sin(pi * x)), n = n_expsinpi, x0 = 0.0
 	ylims!(ax, 0.1, 2.9)
 	axislegend(position = :lt)
 
-	
+
 	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
 	linkxaxes!(ax, ax_error)
-	
+
 	max_error = @. abs(f_x - taylor_x) + eps()
 	lines!(ax_error, x, max_error; label = "Taylor", linestyle = :dash)
-	
+
 	max_error = @. abs(f_x - chebyshev_x) + eps()
 	lines!(ax_error, x, max_error; label = "Interpolation", linestyle = :dot)
-	
+
 	axislegend(position = :lc)
 
 	fig
@@ -423,7 +423,7 @@ let f = x -> ifelse(-0.5 <= x <= 0.5, cos(pi * x), 0.0), n = n_cos0, x0 = 0.0
 		x = vcat(x, floatmin(eltype(x)), -floatmin(eltype(x)))
 	end
 	x = sort(vcat(x, nodes, map(prevfloat, nodes), map(nextfloat, nodes)))
-	
+
 	f_x = @. f(x)
 	lines!(ax, x, f_x; label = L"f(x)", color = :gray)
 
@@ -437,16 +437,16 @@ let f = x -> ifelse(-0.5 <= x <= 0.5, cos(pi * x), 0.0), n = n_cos0, x0 = 0.0
 	ylims!(ax, -0.1, 1.1)
 	axislegend(position = :lt)
 
-	
+
 	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
 	linkxaxes!(ax, ax_error)
-	
+
 	max_error = @. abs(f_x - taylor_x) + eps()
 	lines!(ax_error, x, max_error; label = "Taylor", linestyle = :dash)
-	
+
 	max_error = @. abs(f_x - chebyshev_x) + eps()
 	lines!(ax_error, x, max_error; label = "Interpolation", linestyle = :dot)
-	
+
 	axislegend(position = :lc)
 
 	fig
@@ -463,7 +463,7 @@ let f = sign, n = n_sign
 		x = vcat(x, floatmin(eltype(x)), -floatmin(eltype(x)))
 	end
 	x = sort(vcat(x, nodes, map(prevfloat, nodes), map(nextfloat, nodes)))
-	
+
 	f_x = @. f(x)
 	idx = findfirst(iszero, x)
 	f_x[idx] = NaN
@@ -475,13 +475,13 @@ let f = sign, n = n_sign
 	ylims!(ax, -1.3, 1.3)
 	axislegend(position = :lt)
 
-	
+
 	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
 	linkxaxes!(ax, ax_error)
-	
+
 	max_error = @. abs(f_x - chebyshev_x) + eps()
 	lines!(ax_error, x, max_error; label = "Interpolation", linestyle = :dot)
-	
+
 	axislegend(position = :lc)
 
 	fig
@@ -511,7 +511,7 @@ function plot_interpolation_bounded(f, x; legendpos = :lt)
 	linkxaxes!(ax, ax_error)
 	max_error = @. abs(f_plot - f_int) + eps(eltype(f_plot))
 	lines!(ax_error, x_plot, max_error; label = L"|f(x) - p(x)|")
-	
+
 	return fig
 end
 
