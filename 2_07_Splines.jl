@@ -22,7 +22,7 @@ begin
 	using PlutoUI: Slider
 end
 
-# ╔═╡ a6fe9276-2d42-4329-b47f-0f55dd857a6c
+# ╔═╡ e21f7893-67e3-42ba-82e8-1297502cc1ea
 begin
 	using CairoMakie
 	set_theme!(theme_latexfonts();
@@ -33,77 +33,52 @@ begin
 			   Scatter = (cycle = Cycle([:color, :marker], covary = true),))
 end
 
-# ╔═╡ 2f2ccf7b-78f3-4a10-bb77-7bdd5ebd8f2a
+# ╔═╡ b0d18f0a-7ae7-4c9e-9e29-2f190aaae1c2
 using LaTeXStrings
 
-# ╔═╡ 44b1f12e-95c7-46e4-b745-f8031f6d0106
-using SpecialFunctions: gamma
+# ╔═╡ b6bb5da1-e1c2-4b3b-83ca-6cb1ffa4e77e
+using Enzyme
 
-# ╔═╡ 770403a3-6ee2-49ef-9b73-3715f9e10467
-using TaylorSeries
+# ╔═╡ 9bcc8f09-d577-4d68-a1c0-6c74bd31396e
+begin
+	using CondaPkg
+	CondaPkg.add("numpy")
+	CondaPkg.add("scipy")
+	using PythonCall
+	np = pyimport("numpy")
+	CubicSpline = pyimport("scipy.interpolate" => "CubicSpline")
+end
 
 # ╔═╡ e6c64c80-773b-11ef-2379-bf6609137e69
 md"""
-# 2.5 Chebyshev-Polynome
+# 2.7 Spline-Interpolation
 
-Die Chebyshev-Polynome sind definiert durch
-
-$$T_n(x) :=\cos\bigl( n \arccos(x) \bigr), \quad x \in [-1, 1].$$
-
-Sie können effizient durch die Dreitermkerursion
-
-$$T_{n+1}(x) = 2 x T_{n}(x) - T_{n-1}(x)$$
-
-mit den Anfangswerten $T_0(x) = 1$ und $T_1(x) = x$ ausgewertet werden.
-Als erstes visualisieren wir die ersten paar Chebyshev-Polynome.
+Wir betrachten die Spline-Interpolation von verschiedenen Funktionen
+$f\colon [a, b] \to \mathbb{R}$ an $n + 1$ äquidistanten Stützstellen
+$a = x_0 < \dots < x_n = b$.
 """
 
-# ╔═╡ 737fc5bd-84dc-4873-a741-df5ba70a0393
-let n = 5
-
-	x = range(-1, 1, length = 1000)
-	Tn = similar(x, (length(x), n + 1))
-	Tn[:, 1] = @. one(x)
-	Tn[:, 2] = x
-	for k in 3:(n + 1)
-		@views @. Tn[:, k] = 2 * x * Tn[:, k - 1] - Tn[:, k - 2]
-	end
-
-	fig = Figure()
-	ax_linear = Axis(fig[1, 1]; xlabel = L"x")
-	for k in axes(Tn, 2)
-		lines!(ax_linear, Tn[:, k]; label = L"T_%$(k - 1)")
-	end
-	# axislegend(ax_linear)
-	fig[1, 2] = Legend(fig, ax_linear, framevisible = false)
-
-	fig
-end
-
-# ╔═╡ 5c3760d7-9ef7-4b3d-bf9f-91d36a2b0dcb
+# ╔═╡ 47d77442-2b73-40c5-8bcc-f25b438012f8
 md"""
 ## Sinus
-
-Als nächstes betrachten wir das Interpolationspolynom von Funktionen, die wir
-schon bei der Interpolation mit äquidistanten Stützstellen betrachtet haben.
 """
 
-# ╔═╡ a84beaa2-7d25-41f8-a97d-5b48f4e5a5aa
+# ╔═╡ 0cad6e6d-6662-4858-82a3-23d55d066424
 md"""
-``n`` = $(@bind n_sin Slider(1:20, default = 9, show_value = true))
+``n`` = $(@bind n_sin Slider(1:50, default = 9, show_value = true))
 """
 
-# ╔═╡ b4162007-8c09-48c9-b3e3-bed1b95d4d00
+# ╔═╡ 98cffd58-78f2-4c62-bf04-5fc186682e0e
 md"""
 ## Exponentialfunktion
 """
 
-# ╔═╡ fa0d8a3b-dd67-41c1-9600-9c1e9fc5b719
+# ╔═╡ 72b08dbf-401a-45bb-9a66-3c9a844bf71a
 md"""
-``n`` = $(@bind n_exp Slider(1:20, default = 5, show_value = true))
+``n`` = $(@bind n_exp Slider(1:50, default = 5, show_value = true))
 """
 
-# ╔═╡ 85568719-bfeb-41c5-a04b-16e1eea442b9
+# ╔═╡ d12af10d-04c9-4965-9ee1-5cd28dd30a18
 md"""
 ## Runge-Funktion
 
@@ -114,101 +89,29 @@ $$f(x) = \frac{1}{1 + 25 x^2}$$
 im Intervall $[-1, 1]$ mit äquidistanten Stützstellen.
 """
 
-# ╔═╡ 12b1a335-5d4c-4b56-9f7e-69e0153cce02
+# ╔═╡ 72720612-42b7-4ea4-a2a2-79b520a62bf6
 md"""
-``n`` = $(@bind n_runge1 Slider(1:50, default = 15, show_value = true))
+``n`` = $(@bind n_runge Slider(1:200, default = 15, show_value = true))
 """
 
-# ╔═╡ bdce9841-1c95-49ca-b589-36ff85ca598c
-md"""
-Das Interpolationspolynom divergiert offensichtlich. Dies ist als
-[Runges Phänomen](https://de.wikipedia.org/wiki/Polynominterpolation#Runges_Phänomen)
-bekannt.
-Wenn wir stattdessen Chebyshev-Nullstellen verwenden, sieht das Ergebnis viel besser aus.
-"""
-
-# ╔═╡ dbaff7bc-c319-4fbf-9813-abb0a70d8373
-md"""
-``n`` = $(@bind n_runge2 Slider(1:200, default = 15, show_value = true))
-"""
-
-# ╔═╡ 0296d91d-eb94-4fc2-ab4d-8a062ec8ce64
-md"""
-Ein ähnliches Verhalten tritt auf, wenn wir die stetige aber nicht überall differenzierbare Betragsfunktion
-
-$$f(x) = |x|$$
-
-interpolieren.
-"""
-
-# ╔═╡ e023861a-0edf-4c08-980f-8d2fac99683a
-md"""
-``n`` = $(@bind n_abs1 Slider(1:100, default = 10, show_value = true))
-"""
-
-# ╔═╡ 3a6854ce-a1da-4291-84f4-eb601b1605da
-md"""
-Die Interpolation an äquidistanten Stützstellen oben ist offensichtlich nicht gut.
-Man kann sogar zeigen, dass der Fehler des Interpolationspolynoms divergiert,
-wenn man die Anzahl der Stützstellen erhöht.
-Mit Chebyshev-Nullstellen ist das Ergebnis hingegen sinnvoll.
-"""
-
-# ╔═╡ 2fb8417f-6949-41a2-afd9-dcf8d3b938ff
-md"""
-``n`` = $(@bind n_abs2 Slider(1:100, default = 10, show_value = true))
-"""
-
-# ╔═╡ ecb8c5a7-4e69-4b2c-bd52-6baa688f5e39
-md"""
-## Vergleich mit der Taylor-Entwicklung
-
-Als nächstes vergleichen wir das Ergebnis der Polynominterpolation an
-Chebyshev-Extremstellen mit der Taylor-Entwicklung um $x_0 = 0$ der glatten Funktion
-
-$$f\colon [-1, 1] \to \mathbb{R}, \qquad f(x) = \mathrm{e}^{\sin(x)}.$$
-"""
-
-# ╔═╡ 2d4aa703-e3e1-4463-b525-e3294e2dd4a8
-md"""
-``n`` = $(@bind n_expsinpi Slider(1:100, default = 10, show_value = true))
-"""
-
-# ╔═╡ 12f95634-b34b-4f0e-a8f9-72543d922868
-md"""
-Hier können wir mehrere typische Verhalten erkennen:
-- Die Polynominterpolation an Chebyshev-Extremstellen ist im gesamten Intervall gut während die Taylor-Approximation vor allem nahe des Entwicklungspunktes gut ist.
-- Dicht beim Entwicklungspunkt ist die Taylor-Approximation besser als die Chebyshev-Approximation, weiter davon entfernt ist es genau anders - mit zum Teil großen Fehlern der Taylor-Approximation am Rand des Intervalls.
-- Beide Approximationen scheinen gegen die Funktion $f$ zu konvergieren.
-"""
-
-# ╔═╡ 80768e73-efbf-455e-a6bf-e3f6b994d692
+# ╔═╡ 8def2d7e-82e2-4409-a9be-f621636dbecd
 md"""
 ## Eine stetige aber nicht überall stetig-differenzierbare Funktion
 
 Wir betrachten die Funktion
 
-$$f\colon [-1, 1] \to \mathbb{R}, \qquad f(x) = \begin{cases}
-	\cos(\pi x), & -\frac{1}{2} \le x \le \frac{1}{2}, \\
-	0, & \text{sonst},
+$$f\colon [-\pi, \pi] \to \mathbb{R}, \qquad f(x) = \begin{cases}
+	\cos(x), & -\frac{\pi}{2} \le x \le \frac{\pi}{2}, \\
+	0, & \text{sonst}.
 \end{cases}$$
-
-und verwenden $x_0 = 0$ für die Taylor-Entwicklung.
 """
 
-# ╔═╡ e5b515de-06d1-4898-a95e-a09db4453549
+# ╔═╡ 991547f9-8674-408e-9906-44ca3db7f793
 md"""
-``n`` = $(@bind n_cos0 Slider(0:100, default = 10, show_value = true))
+``n`` = $(@bind n_cos0 Slider(1:100, default = 10, show_value = true))
 """
 
-# ╔═╡ 4969f593-c0a1-4957-8903-7c14c2c32b03
-md"""
-Auch hier können wir mehrere typische Verhalten erkennen:
-- Die Taylor-Approximation kann nur den "inneren Teil" gut approximieren.
-- Die Chebyshev-Approximation konvergiert deutlich langsamer als bei der glatten Funktion vorher.
-"""
-
-# ╔═╡ f69d03b4-a820-4eae-a78c-bb1c9b3df8eb
+# ╔═╡ b65bc460-7e9f-4cca-bbbb-93f5422e97f1
 md"""
 ## Eine unstetige Funktion
 
@@ -219,20 +122,11 @@ $$f\colon [-1, 1] \to \mathbb{R}, \qquad f(x) = \begin{cases}
 	0, & x = 0, \\
 	1, & x > 0.
 \end{cases}$$
-
-Da $f$ unstetig ist, betrachten wir keine Taylor-Entwicklung.
 """
 
-# ╔═╡ 70fb2ad2-3926-4057-abb1-ad49362c2d21
+# ╔═╡ 0029693d-f80c-4426-8f0f-95b8e2aa7ab2
 md"""
-``n`` = $(@bind n_sign Slider(0:500, default = 10, show_value = true))
-"""
-
-# ╔═╡ 13372640-c397-4939-a20f-e19ca0c178c0
-md"""
-Hier können wir ebenfalls einige typische Verhaltensweisen beobachten:
-- Ausreichend weit von der Unstetigkeitsstelle entfernt scheint die Approximation weiterhin punktweise zu konvergieren - allerdings noch langsamer als vorher.
-- Nahe der Unstetigkeitsstelle gibt es immer Über- und Unter-Schwingungen, deren Amplitude nicht abnimmt. Dies ist als [Gibbs'sches Phänomen](https://de.wikipedia.org/wiki/Gibbssches_Phänomen) bekannt.
+``n`` = $(@bind n_sign Slider(1:500, default = 10, show_value = true))
 """
 
 # ╔═╡ 4340e86a-e0fe-4cfe-9d1a-9bb686cbb2fd
@@ -262,327 +156,96 @@ _First, we will install (and compile) some packages. This can take a few minutes
 """
 
 
-# ╔═╡ 0721e242-9c29-4840-857b-b04c99efdf58
-"""
-	barycentric_weights(x)
-
-Given a vector `x` of nodes, compute the associated barycentric weights.
-"""
-function barycentric_weights(x)
-	Base.require_one_based_indexing(x)
-    w = similar(x)
-    fill!(w, one(eltype(w)))
-
-    for j in 2:length(x)
-        for k in 1:(j - 1)
-            w[k] *= x[k] - x[j]
-            w[j] *= x[j] - x[k]
-        end
-    end
-
-    @. w = inv(w)
-    return w
-end
-
-# ╔═╡ 8138376b-2d90-401e-a1d2-24291e7445b5
-"""
-	interpolate(x, nodes, values, weights = barycentric_weights(x))
-
-Compute the value of the interpolation polynomial with data
-`nodes, values` at `x` using the barycentric weights `weights`.
-`x` can be a single number or a vector.
-If `weights` is omitted, the barycentric weights are computed
-on the fly.
-"""
-function interpolate(x::Number, nodes, values, weights)
-    num = den = zero(eltype(values))
-
-    for j in eachindex(nodes, values, weights)
-		# Although one should in general never compare floating point
-		# number for exact identity, it is okay to do so here.
-		# See Berrut, Trefethen (2004), Higham (2004) and related
-		# references.
-        if x == nodes[j] # not x ≈ nodes[j] !
-            return values[j]
-        else
-            t = weights[j] / (x - nodes[j])
-            num += t * values[j]
-            den += t
-        end
-    end
-
-    return num / den
-end
-
-# ╔═╡ 84ece4e4-6166-4122-a230-0ca2677f37f2
-function interpolate(x, nodes, values, weights)
-    f = similar(x)
-    for i in eachindex(x, f)
-        f[i] = interpolate(x[i], nodes, values, weights)
-    end
-    return f
-end
-
-# ╔═╡ f900259a-6e46-4673-91b2-96cdb4322d00
-function interpolate(x, nodes, values)
-    weights = barycentric_weights(nodes)
-    return interpolate(x, nodes, values, weights)
-end
-
-# ╔═╡ 18b9502a-3459-4500-814e-c78cf8e7a1f3
-"""
-	node_polynomial(x::Number, nodes)
-
-Compute the node polynomial associated to the `nodes` at `x`.
-"""
-function node_polynomial(x::Number, nodes)
-	val = one(x)
-	for xi in nodes
-		val *= (x - xi)
-	end
-	return val
-end
-
-# ╔═╡ 6d46d825-662b-48ef-ac25-876d292b9d8f
-function plot_interpolation_error(f, x; legendpos = :lt)
-	x_plot = range(extrema(x)..., length = 5000)
-	if x_plot[begin] <= 0 <= x_plot[end]
-		x_plot = vcat(x_plot, floatmin(eltype(x_plot)), -floatmin(eltype(x_plot)))
-	end
-	x_plot = sort(vcat(x_plot, x, map(prevfloat, x), map(nextfloat, x)))
-	f_int = interpolate(x_plot, x, f.(x), barycentric_weights(x))
-
-	fig = Figure()
-	ax = Axis(fig[1, 1]; xlabel = L"x")
-	scatter!(ax, x, f.(x); label = L"(x_i, f_i)")
-	lines!(ax, x_plot, f_int; label = "Interpolationspolynom")
-	f_plot = f.(x_plot)
-	lines!(ax, x_plot, f_plot; label = L"f")
-	axislegend(ax; position = legendpos)
-
-
-	ax_error = Axis(fig[2, 1]; xlabel = L"x", yscale = log10)
-	linkxaxes!(ax, ax_error)
-	max_error = @. abs(f_plot - f_int) + eps(eltype(f_plot))
-	lines!(ax_error, x_plot, max_error; label = L"|f(x) - p(x)|")
-	estimate = abs.(node_polynomial.(x_plot, (x,))) /
-				gamma(length(x) + 1) # Γ(n + 1) = n!
-	lines!(ax_error, x_plot, estimate; label = L"|\lambda(x)| / (n + 1)!")
-	axislegend(ax_error; position = legendpos)
-
-	return fig
-end
-
-# ╔═╡ 4bef46dc-4d75-4850-b8a2-57ae1620a516
-function chebyshev_roots(_a, _b; length)
-	a, b = promote(_a, _b)
-	T = typeof(a)
-	x = [cospi(one(T) * (2 * k - 1) / (2 * length)) for k in length:-1:1]
-	return @. (b - a) / 2 * (x + 1) + a
-end
-
-# ╔═╡ 63df47b9-093a-48d4-8d0c-d6a4f4d065e1
-let n = n_sin, T = Float64
-	x = chebyshev_roots(-T(π), T(π), length = n + 1)
-	plot_interpolation_error(sin, x, legendpos = :rb)
-end
-
-# ╔═╡ 92a1b169-9418-442d-aad6-0c458c866bc3
-let n = n_exp, T = Float64
-	x = chebyshev_roots(zero(T), one(T), length = n + 1)
-	plot_interpolation_error(exp, x, legendpos = :rb)
-end
-
-# ╔═╡ 675deda5-eff9-4287-b288-ea311b729f95
-function chebyshev_extrema(_a, _b; length)
-	a, b = promote(_a, _b)
-	T = typeof(a)
-	x = [cospi(one(T) * k / (length - 1)) for k in (length - 1):-1:0]
-	return @. (b - a) / 2 * (x + 1) + a
-end
-
-# ╔═╡ fc1cdd4d-75df-46d9-a691-64a0b98df2d3
-let f = x -> exp(sin(pi * x)), n = n_expsinpi, x0 = 0.0
-	fig = Figure()
-	ax = Axis(fig[1, 1]; xlabel = L"x")
-
-	nodes = chebyshev_extrema(-1.0, 1.0, length = n + 1)
-	x = range(-1.0, 1.0, step = 1.0e-2)
-	if x[begin] <= 0 <= x[end]
-		x = vcat(x, floatmin(eltype(x)), -floatmin(eltype(x)))
-	end
-	x = sort(vcat(x, nodes, map(prevfloat, nodes), map(nextfloat, nodes)))
-
-	f_x = @. f(x)
-	lines!(ax, x, f_x; label = L"\exp(\sin(\pi x))", color = :gray)
-
-	taylor = f(Taylor1(n) + x0)
-	taylor_x = @. taylor(x - x0)
-	lines!(ax, x, taylor_x; label = "Taylor", linestyle = :dash)
-
-	chebyshev_x = interpolate(x, nodes, f.(nodes), barycentric_weights(nodes))
-	lines!(ax, x, chebyshev_x; label = "Interpolation", linestyle = :dot)
-
-	ylims!(ax, 0.1, 2.9)
-	axislegend(position = :lt)
-
-
-	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
-	linkxaxes!(ax, ax_error)
-
-	max_error = @. abs(f_x - taylor_x) + eps()
-	lines!(ax_error, x, max_error; label = "Taylor", linestyle = :dash)
-
-	max_error = @. abs(f_x - chebyshev_x) + eps()
-	lines!(ax_error, x, max_error; label = "Interpolation", linestyle = :dot)
-
-	axislegend(position = :lc)
-
-	fig
-end
-
-# ╔═╡ 1b1e0f42-4066-4385-88b1-42463016ef91
-let f = x -> ifelse(-0.5 <= x <= 0.5, cos(pi * x), 0.0), n = n_cos0, x0 = 0.0
-	fig = Figure()
-	ax = Axis(fig[1, 1]; xlabel = L"x")
-
-	nodes = chebyshev_extrema(-1.0, 1.0, length = n + 1)
-	x = range(-1.0, 1.0, step = 1.0e-2)
-	if x[begin] <= 0 <= x[end]
-		x = vcat(x, floatmin(eltype(x)), -floatmin(eltype(x)))
-	end
-	x = sort(vcat(x, nodes, map(prevfloat, nodes), map(nextfloat, nodes)))
-
-	f_x = @. f(x)
-	lines!(ax, x, f_x; label = L"f(x)", color = :gray)
-
-	taylor = f(Taylor1(n) + x0)
-	taylor_x = @. taylor(x - x0)
-	lines!(ax, x, taylor_x; label = "Taylor", linestyle = :dash)
-
-	chebyshev_x = interpolate(x, nodes, f.(nodes), barycentric_weights(nodes))
-	lines!(ax, x, chebyshev_x; label = "Interpolation", linestyle = :dot)
-
-	ylims!(ax, -0.1, 1.1)
-	axislegend(position = :lt)
-
-
-	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
-	linkxaxes!(ax, ax_error)
-
-	max_error = @. abs(f_x - taylor_x) + eps()
-	lines!(ax_error, x, max_error; label = "Taylor", linestyle = :dash)
-
-	max_error = @. abs(f_x - chebyshev_x) + eps()
-	lines!(ax_error, x, max_error; label = "Interpolation", linestyle = :dot)
-
-	axislegend(position = :lc)
-
-	fig
-end
-
-# ╔═╡ 25892baf-c414-47a1-8a3a-308e1b13ce7c
-let f = sign, n = n_sign
-	fig = Figure()
-	ax = Axis(fig[1, 1]; xlabel = L"x")
-
-	nodes = chebyshev_extrema(-1.0, 1.0, length = n + 1)
-	x = range(-1.0, 1.0, step = 1.0e-2)
-	if x[begin] <= 0 <= x[end]
-		x = vcat(x, floatmin(eltype(x)), -floatmin(eltype(x)))
-	end
-	x = sort(vcat(x, nodes, map(prevfloat, nodes), map(nextfloat, nodes)))
-
-	f_x = @. f(x)
-	idx = findfirst(iszero, x)
-	f_x[idx] = NaN
-	lines!(ax, x, f_x; label = L"f(x)", color = :gray)
-
-	chebyshev_x = interpolate(x, nodes, f.(nodes), barycentric_weights(nodes))
-	lines!(ax, x, chebyshev_x; label = "Interpolation", linestyle = :dot)
-
-	ylims!(ax, -1.3, 1.3)
-	axislegend(position = :lt)
-
-
-	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
-	linkxaxes!(ax, ax_error)
-
-	max_error = @. abs(f_x - chebyshev_x) + eps()
-	lines!(ax_error, x, max_error; label = "Interpolation", linestyle = :dot)
-
-	axislegend(position = :lc)
-
-	fig
-end
-
-# ╔═╡ c569f697-82e0-477f-93bf-d7ce2a12c6d9
-function plot_interpolation_bounded(f, x; legendpos = :lt)
+# ╔═╡ 08cbc052-49d7-4cc5-bb76-7c56e709cf15
+function plot_interpolation(f, x; legendpos = :lt)
 	x_plot = range(extrema(x)..., length = 5_000)
 	if x_plot[begin] <= 0 <= x_plot[end]
 		x_plot = vcat(x_plot, floatmin(eltype(x_plot)), -floatmin(eltype(x_plot)))
 	end
 	x_plot = sort(vcat(x_plot, x, map(prevfloat, x), map(nextfloat, x)))
-	f_int = interpolate(x_plot, x, f.(x), barycentric_weights(x))
+	fx = f.(x)
+	spline1 = pyconvert(Vector, np.interp(x_plot, x, fx))
+	spline3_natural = pyconvert(Vector, 
+								CubicSpline(x, fx, bc_type="natural")(x_plot))
+	spline3_notaknot = pyconvert(Vector, 
+								 CubicSpline(x, fx, bc_type="not-a-knot")(x_plot))
+	f′_left = autodiff(Forward, f, Duplicated(x[begin], 1.0)) |> only
+	f′_right = autodiff(Forward, f, Duplicated(x[end], 1.0)) |> only
+	bc_complete = ((1, f′_left), (1, f′_right))
+	spline3_complete = pyconvert(Vector, 
+								 CubicSpline(x, fx, bc_type=bc_complete)(x_plot))
 
 	fig = Figure()
 	ax = Axis(fig[1, 1]; xlabel = L"x")
-	lines!(ax, x_plot, f_int; label = L"p")
+	lines!(ax, x_plot, spline1; label = "lin. Spline")
+	lines!(ax, x_plot, spline3_natural; label = "kub. Spline (natürlich)")
+	lines!(ax, x_plot, spline3_notaknot; label = "kub. Spline (not-a-knot)")
+	lines!(ax, x_plot, spline3_complete; label = "kub. Spline (vollst.)")
 	f_plot = f.(x_plot)
 	lines!(ax, x_plot, f_plot; label = L"f")
-	if length(x) < 100
+	if length(x) < 20
 		scatter!(ax, x, f.(x); label = L"(x_i, f_i)")
 	end
-	axislegend(ax; position = legendpos)
-	ylims!(ax, -0.1, 1.1)
+	# axislegend(ax; position = legendpos)
+	fig[1, 2] = Legend(fig, ax, framevisible = false)
 
 	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
 	linkxaxes!(ax, ax_error)
-	max_error = @. abs(f_plot - f_int) + eps(eltype(f_plot))
-	lines!(ax_error, x_plot, max_error; label = L"|f(x) - p(x)|")
+	for spline in (spline1, spline3_natural, spline3_notaknot, spline3_complete)
+		max_error = @. abs(f_plot - spline) + eps(eltype(f_plot))
+		lines!(ax_error, x_plot, max_error)
+	end
 
 	return fig
 end
 
-# ╔═╡ dd485c1c-c8e6-42da-bcc6-d319ae90bacc
-let n = n_runge1, T = Float64
+# ╔═╡ bb5a14d5-c93c-4a5e-861e-d7cc49bb7ea7
+let n = n_sin, T = Float64
+	x = range(-T(π), T(π), length = n + 1)
+	plot_interpolation(sin, x, legendpos = :rb)
+end
+
+# ╔═╡ 41eb637c-9d8a-40a9-a1a4-96eed5d7904d
+let n = n_exp, T = Float64
+	x = range(zero(T), one(T), length = n + 1)
+	plot_interpolation(exp, x, legendpos = :rb)
+end
+
+# ╔═╡ f26dca14-02f2-4ad6-a91e-c6234f89216e
+let n = n_runge, T = Float64
 	x = range(-one(T), one(T), length = n + 1)
-	plot_interpolation_bounded(x -> 1 / (1 + 25 * x^2), x, legendpos = :rb)
+	plot_interpolation(x -> 1 / (1 + 25 * x^2), x, legendpos = :rb)
 end
 
-# ╔═╡ 6430a6de-8296-4407-b28e-536abb8e8aac
-let n = n_runge2, T = Float64
-	x = chebyshev_roots(-one(T), one(T), length = n + 1)
-	plot_interpolation_bounded(x -> 1 / (1 + 25 * x^2), x, legendpos = :rb)
+# ╔═╡ cd428691-bea9-41da-910b-df528104e28a
+let n = n_cos0, T = Float64
+	x = range(-one(T) * π, one(T) * π, length = n + 1)
+	plot_interpolation(x -> ifelse(-π / 2 <= x <= π / 2, cos(x), 0.0), x, legendpos = :rb)
 end
 
-# ╔═╡ b4f14fb7-fa2d-4d4f-bf13-6a33974d142a
-let n = n_abs1, T = Float64
+# ╔═╡ 952172aa-00f4-4796-a5c9-f6caff0ebb23
+let n = n_sign, T = Float64
 	x = range(-one(T), one(T), length = n + 1)
-	plot_interpolation_bounded(abs, x, legendpos = :rb)
-end
-
-# ╔═╡ f6d0c5e6-4237-4037-bd9b-b77bb8989afc
-let n = n_abs2, T = Float64
-	x = chebyshev_roots(-one(T), one(T), length = n + 1)
-	plot_interpolation_bounded(abs, x, legendpos = :rb)
+	plot_interpolation(sign, x, legendpos = :rb)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
-TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 
 [compat]
-CairoMakie = "~0.13.2"
+CairoMakie = "~0.13.4"
+CondaPkg = "~0.2.26"
+Enzyme = "~0.13.35"
 LaTeXStrings = "~1.4.0"
 PlutoUI = "~0.7.62"
-SpecialFunctions = "~2.5.0"
-TaylorSeries = "~0.19.1"
+PythonCall = "~0.9.24"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -591,7 +254,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.9"
 manifest_format = "2.0"
-project_hash = "2c69e501b00e4238aaaf1634997a5d089cc462ff"
+project_hash = "aa1fd0593f92a61e5a8f12b9269ca47f8c6a79ab"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -699,9 +362,9 @@ version = "1.1.1"
 
 [[deps.CairoMakie]]
 deps = ["CRC32c", "Cairo", "Cairo_jll", "Colors", "FileIO", "FreeType", "GeometryBasics", "LinearAlgebra", "Makie", "PrecompileTools"]
-git-tree-sha1 = "15d6504f47633ee9b63be11a0384925ba0c84f61"
+git-tree-sha1 = "c1c90ea6bba91f769a8fc3ccda802e96620eb24c"
 uuid = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-version = "0.13.2"
+version = "0.13.4"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
@@ -768,6 +431,12 @@ deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "1.1.1+0"
 
+[[deps.CondaPkg]]
+deps = ["JSON3", "Markdown", "MicroMamba", "Pidfile", "Pkg", "Preferences", "Scratch", "TOML", "pixi_jll"]
+git-tree-sha1 = "44d759495ed1711e3c0ca469f8d609429318b332"
+uuid = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+version = "0.2.26"
+
 [[deps.ConstructionBase]]
 git-tree-sha1 = "76219f1ed5771adbb096743bff43fb5fdd4c1157"
 uuid = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
@@ -816,9 +485,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["AliasTables", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns"]
-git-tree-sha1 = "0b4190661e8a4e51a842070e7dd4fae440ddb7f4"
+git-tree-sha1 = "6d8b535fd38293bc54b88455465a1386f8ac1c3c"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.118"
+version = "0.25.119"
 
     [deps.Distributions.extensions]
     DistributionsChainRulesCoreExt = "ChainRulesCore"
@@ -851,6 +520,43 @@ git-tree-sha1 = "bddad79635af6aec424f53ed8aad5d7555dc6f00"
 uuid = "4e289a0a-7415-4d19-859d-a7e5c4648b56"
 version = "1.0.5"
 
+[[deps.Enzyme]]
+deps = ["CEnum", "EnzymeCore", "Enzyme_jll", "GPUCompiler", "LLVM", "Libdl", "LinearAlgebra", "ObjectFile", "PrecompileTools", "Preferences", "Printf", "Random", "SparseArrays"]
+git-tree-sha1 = "59c1db6e150d55f2df6a1383759931bf8571c6b8"
+uuid = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+version = "0.13.35"
+
+    [deps.Enzyme.extensions]
+    EnzymeBFloat16sExt = "BFloat16s"
+    EnzymeChainRulesCoreExt = "ChainRulesCore"
+    EnzymeGPUArraysCoreExt = "GPUArraysCore"
+    EnzymeLogExpFunctionsExt = "LogExpFunctions"
+    EnzymeSpecialFunctionsExt = "SpecialFunctions"
+    EnzymeStaticArraysExt = "StaticArrays"
+
+    [deps.Enzyme.weakdeps]
+    BFloat16s = "ab4f0b2a-ad5b-11e8-123f-65d77653426b"
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    GPUArraysCore = "46192b85-c4d5-4398-a991-12ede77f4527"
+    LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
+    SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[[deps.EnzymeCore]]
+git-tree-sha1 = "0cdb7af5c39e92d78a0ee8d0a447d32f7593137e"
+uuid = "f151be2c-9106-41f4-ab19-57ee4f262869"
+version = "0.8.8"
+weakdeps = ["Adapt"]
+
+    [deps.EnzymeCore.extensions]
+    AdaptExt = "Adapt"
+
+[[deps.Enzyme_jll]]
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML"]
+git-tree-sha1 = "c29af735ddb2381732cdf5dd72fc32069315619d"
+uuid = "7cc45869-7501-5eee-bdea-0790c847d4ef"
+version = "0.0.173+0"
+
 [[deps.ExactPredicates]]
 deps = ["IntervalArithmetic", "Random", "StaticArrays"]
 git-tree-sha1 = "b3f2ff58735b5f024c392fde763f29b057e4b025"
@@ -862,6 +568,11 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "d55dffd9ae73ff72f1c0482454dcf2ec6c6c4a63"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
 version = "2.6.5+0"
+
+[[deps.ExprTools]]
+git-tree-sha1 = "27415f162e6028e81c72b82ef756bf321213b6ec"
+uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
+version = "0.1.10"
 
 [[deps.Extents]]
 git-tree-sha1 = "063512a13dbe9c40d999c439268539aa552d1ae6"
@@ -967,9 +678,15 @@ version = "0.10.6"
 
 [[deps.FriBidi_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "846f7026a9decf3679419122b49f8a1fdb48d2d5"
+git-tree-sha1 = "7a214fdac5ed5f59a22c2d9a885a16da1c74bbc7"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
-version = "1.0.16+0"
+version = "1.0.17+0"
+
+[[deps.GPUCompiler]]
+deps = ["ExprTools", "InteractiveUtils", "LLVM", "Libdl", "Logging", "PrecompileTools", "Preferences", "Scratch", "Serialization", "TOML", "TimerOutputs", "UUIDs"]
+git-tree-sha1 = "c8ffc85902be50f8fb5a1e1a360bec43efd83493"
+uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
+version = "1.3.0"
 
 [[deps.GeoFormatTypes]]
 git-tree-sha1 = "8e233d5167e63d708d41f87597433f59a0f213fe"
@@ -1127,9 +844,9 @@ weakdeps = ["Unitful"]
 
 [[deps.IntervalArithmetic]]
 deps = ["CRlibm_jll", "LinearAlgebra", "MacroTools", "OpenBLASConsistentFPCSR_jll", "RoundingEmulator"]
-git-tree-sha1 = "5aad168b75fc3b6b25e99feb1e6e3168d41e4c08"
+git-tree-sha1 = "2c337f943879911c74bb62c927b65b9546552316"
 uuid = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
-version = "0.22.28"
+version = "0.22.29"
 
     [deps.IntervalArithmetic.extensions]
     IntervalArithmeticDiffRulesExt = "DiffRules"
@@ -1201,6 +918,18 @@ git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3ff9e2ae58c9a"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.4"
 
+[[deps.JSON3]]
+deps = ["Dates", "Mmap", "Parsers", "PrecompileTools", "StructTypes", "UUIDs"]
+git-tree-sha1 = "1d322381ef7b087548321d3f878cb4c9bd8f8f9b"
+uuid = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+version = "1.14.1"
+
+    [deps.JSON3.extensions]
+    JSON3ArrowExt = ["ArrowTypes"]
+
+    [deps.JSON3.weakdeps]
+    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
+
 [[deps.JpegTurbo]]
 deps = ["CEnum", "FileIO", "ImageCore", "JpegTurbo_jll", "TOML"]
 git-tree-sha1 = "9496de8fb52c224a2e3f9ff403947674517317d9"
@@ -1230,6 +959,24 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "aaafe88dccbd957a8d82f7d05be9b69172e0cee3"
 uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
 version = "4.0.1+0"
+
+[[deps.LLVM]]
+deps = ["CEnum", "LLVMExtra_jll", "Libdl", "Preferences", "Printf", "Unicode"]
+git-tree-sha1 = "5fcfea6df2ff3e4da708a40c969c3812162346df"
+uuid = "929cbde3-209d-540e-8aea-75f648917ca0"
+version = "9.2.0"
+
+    [deps.LLVM.extensions]
+    BFloat16sExt = "BFloat16s"
+
+    [deps.LLVM.weakdeps]
+    BFloat16s = "ab4f0b2a-ad5b-11e8-123f-65d77653426b"
+
+[[deps.LLVMExtra_jll]]
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML"]
+git-tree-sha1 = "4b5ad6a4ffa91a00050a964492bc4f86bb48cea0"
+uuid = "dad2f222-ce93-54a1-a47d-0025e8a3acab"
+version = "0.0.35+0"
 
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1290,23 +1037,11 @@ git-tree-sha1 = "27ecae93dd25ee0909666e6835051dd684cc035e"
 uuid = "e9f186c6-92d2-5b65-8a66-fee21dc1b490"
 version = "3.2.2+2"
 
-[[deps.Libgcrypt_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgpg_error_jll"]
-git-tree-sha1 = "d77592fa54ad343c5043b6f38a03f1a3c3959ffe"
-uuid = "d4300ac3-e22c-5743-9152-c294e39db1e4"
-version = "1.11.1+0"
-
 [[deps.Libglvnd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libX11_jll", "Xorg_libXext_jll"]
 git-tree-sha1 = "ff3b4b9d35de638936a525ecd36e86a8bb919d11"
 uuid = "7e76a0d4-f3c7-5321-8279-8d96eeed0f29"
 version = "1.7.0+0"
-
-[[deps.Libgpg_error_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "df37206100d39f79b3376afb6b9cee4970041c61"
-uuid = "7add5ba3-2f88-524e-9cd5-f83b8a55f7b8"
-version = "1.51.1+0"
 
 [[deps.Libiconv_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1367,21 +1102,21 @@ uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
 version = "2025.0.1+1"
 
 [[deps.MacroTools]]
-git-tree-sha1 = "72aebe0b5051e5143a079a4685a46da330a40472"
+git-tree-sha1 = "1e0228a030642014fe5cfe68c2c0a818f9e3f522"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.15"
+version = "0.5.16"
 
 [[deps.Makie]]
 deps = ["Animations", "Base64", "CRC32c", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Dates", "DelaunayTriangulation", "Distributions", "DocStringExtensions", "Downloads", "FFMPEG_jll", "FileIO", "FilePaths", "FixedPointNumbers", "Format", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageBase", "ImageIO", "InteractiveUtils", "Interpolations", "IntervalSets", "InverseFunctions", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MacroTools", "MakieCore", "Markdown", "MathTeXEngine", "Observables", "OffsetArrays", "PNGFiles", "Packing", "PlotUtils", "PolygonOps", "PrecompileTools", "Printf", "REPL", "Random", "RelocatableFolders", "Scratch", "ShaderAbstractions", "Showoff", "SignedDistanceFields", "SparseArrays", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "TriplotBase", "UnicodeFun", "Unitful"]
-git-tree-sha1 = "e64b545d25e05a609521bfc36724baa072bfd31a"
+git-tree-sha1 = "0318d174aa9ec593ddf6dc340b434657a8f1e068"
 uuid = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-version = "0.22.2"
+version = "0.22.4"
 
 [[deps.MakieCore]]
 deps = ["ColorTypes", "GeometryBasics", "IntervalSets", "Observables"]
-git-tree-sha1 = "605d6e8f2b7eba7f5bc6a16d297475075d5ea775"
+git-tree-sha1 = "903ef1d9d326ebc4a9e6cf24f22194d8da022b50"
 uuid = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
-version = "0.9.1"
+version = "0.9.2"
 
 [[deps.MappedArrays]]
 git-tree-sha1 = "2dab0221fe2b0f2cb6754eaa743cc266339f527e"
@@ -1394,14 +1129,20 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[deps.MathTeXEngine]]
 deps = ["AbstractTrees", "Automa", "DataStructures", "FreeTypeAbstraction", "GeometryBasics", "LaTeXStrings", "REPL", "RelocatableFolders", "UnicodeFun"]
-git-tree-sha1 = "f45c8916e8385976e1ccd055c9874560c257ab13"
+git-tree-sha1 = "f5a6805fb46c0285991009b526ec6fae43c6dec2"
 uuid = "0a4f8689-d25c-4efe-a92b-7142dfc1aa53"
-version = "0.6.2"
+version = "0.6.3"
 
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 version = "2.28.2+1"
+
+[[deps.MicroMamba]]
+deps = ["Pkg", "Scratch", "micromamba_jll"]
+git-tree-sha1 = "011cab361eae7bcd7d278f0a7a00ff9c69000c51"
+uuid = "0b3b1443-0f03-428d-bdfb-f27f9c1191ea"
+version = "0.1.14"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
@@ -1438,15 +1179,21 @@ version = "1.1.1"
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 version = "1.2.0"
 
+[[deps.ObjectFile]]
+deps = ["Reexport", "StructIO"]
+git-tree-sha1 = "09b1fe6ff16e6587fa240c165347474322e77cf1"
+uuid = "d8793406-e978-5875-9003-1fc021f44a92"
+version = "0.4.4"
+
 [[deps.Observables]]
 git-tree-sha1 = "7438a59546cf62428fc9d1bc94729146d37a7225"
 uuid = "510215fc-4207-5dde-b226-833fc4488ee2"
 version = "0.5.5"
 
 [[deps.OffsetArrays]]
-git-tree-sha1 = "a414039192a155fb38c4599a60110f0018c6ec82"
+git-tree-sha1 = "117432e406b5c023f665fa73dc26e79ec3630151"
 uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
-version = "1.16.0"
+version = "1.17.0"
 weakdeps = ["Adapt"]
 
     [deps.OffsetArrays.extensions]
@@ -1516,9 +1263,9 @@ version = "10.42.0+1"
 
 [[deps.PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "48566789a6d5f6492688279e22445002d171cf76"
+git-tree-sha1 = "0e1340b5d98971513bddaa6bbed470670cebbbfe"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
-version = "0.11.33"
+version = "0.11.34"
 
 [[deps.PNGFiles]]
 deps = ["Base64", "CEnum", "ImageCore", "IndirectArrays", "OffsetArrays", "libpng_jll"]
@@ -1546,9 +1293,15 @@ version = "1.56.1+0"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
-git-tree-sha1 = "8489905bcdbcfac64d1daa51ca07c0d8f0283821"
+git-tree-sha1 = "44f6c1f38f77cafef9450ff93946c53bd9ca16ff"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.8.1"
+version = "2.8.2"
+
+[[deps.Pidfile]]
+deps = ["FileWatching", "Test"]
+git-tree-sha1 = "2d8aaf8ee10df53d0dfb9b8ee44ae7c04ced2b03"
+uuid = "fa939f87-e72e-5be4-a000-7fc836dbe307"
+version = "1.3.0"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "LLVMOpenMP_jll", "Libdl"]
@@ -1611,6 +1364,12 @@ git-tree-sha1 = "1d36ef11a9aaf1e8b74dacc6a731dd1de8fd493d"
 uuid = "43287f4e-b6f4-7ad1-bb20-aadabca52c3d"
 version = "1.3.0"
 
+[[deps.PythonCall]]
+deps = ["CondaPkg", "Dates", "Libdl", "MacroTools", "Markdown", "Pkg", "Requires", "Serialization", "Tables", "UnsafePointers"]
+git-tree-sha1 = "feab249add2d40873acbd6b286b450bd30b083dd"
+uuid = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+version = "0.9.24"
+
 [[deps.QOI]]
 deps = ["ColorTypes", "FileIO", "FixedPointNumbers"]
 git-tree-sha1 = "8b3fc30bc0390abdce15f8822c889f669baed73d"
@@ -1622,12 +1381,10 @@ deps = ["DataStructures", "LinearAlgebra"]
 git-tree-sha1 = "9da16da70037ba9d701192e27befedefb91ec284"
 uuid = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 version = "2.11.2"
+weakdeps = ["Enzyme"]
 
     [deps.QuadGK.extensions]
     QuadGKEnzymeExt = "Enzyme"
-
-    [deps.QuadGK.weakdeps]
-    Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
@@ -1755,9 +1512,9 @@ version = "1.10.0"
 
 [[deps.SpecialFunctions]]
 deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
-git-tree-sha1 = "64cca0c26b4f31ba18f13f6c12af7c85f478cfde"
+git-tree-sha1 = "41852b8679f78c8d8961eeadc8f62cef861a52e3"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "2.5.0"
+version = "2.5.1"
 weakdeps = ["ChainRulesCore"]
 
     [deps.SpecialFunctions.extensions]
@@ -1840,6 +1597,17 @@ version = "0.7.1"
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
+[[deps.StructIO]]
+git-tree-sha1 = "c581be48ae1cbf83e899b14c07a807e1787512cc"
+uuid = "53d494c1-5632-5724-8f4c-31dff12d585f"
+version = "0.3.1"
+
+[[deps.StructTypes]]
+deps = ["Dates", "UUIDs"]
+git-tree-sha1 = "159331b30e94d7b11379037feeb9b690950cace8"
+uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
+version = "1.11.0"
+
 [[deps.SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
@@ -1871,24 +1639,6 @@ deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 version = "1.10.0"
 
-[[deps.TaylorSeries]]
-deps = ["LinearAlgebra", "Markdown", "SparseArrays"]
-git-tree-sha1 = "2c308aab2e14b399e4b8d6af7c486a241c8ca87a"
-uuid = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
-version = "0.19.1"
-
-    [deps.TaylorSeries.extensions]
-    TaylorSeriesIAExt = "IntervalArithmetic"
-    TaylorSeriesJLD2Ext = "JLD2"
-    TaylorSeriesRATExt = "RecursiveArrayTools"
-    TaylorSeriesSAExt = "StaticArrays"
-
-    [deps.TaylorSeries.weakdeps]
-    IntervalArithmetic = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
-    JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
-    RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
-    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "1feb45f88d133a655e001435632f019a9a1bcdb6"
@@ -1904,6 +1654,18 @@ deps = ["ColorTypes", "DataStructures", "DocStringExtensions", "FileIO", "FixedP
 git-tree-sha1 = "f21231b166166bebc73b99cea236071eb047525b"
 uuid = "731e570b-9d59-4bfa-96dc-6df516fadf69"
 version = "0.11.3"
+
+[[deps.TimerOutputs]]
+deps = ["ExprTools", "Printf"]
+git-tree-sha1 = "f57facfd1be61c42321765d3551b3df50f7e09f6"
+uuid = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
+version = "0.5.28"
+
+    [deps.TimerOutputs.extensions]
+    FlameGraphsExt = "FlameGraphs"
+
+    [deps.TimerOutputs.weakdeps]
+    FlameGraphs = "08572546-2f56-4bcf-ba4e-bab62c3a3f89"
 
 [[deps.TranscodingStreams]]
 git-tree-sha1 = "0c45878dcfdcfa8480052b6ab162cdd138781742"
@@ -1921,9 +1683,9 @@ uuid = "981d1d27-644d-49a2-9326-4793e63143c3"
 version = "0.1.0"
 
 [[deps.URIs]]
-git-tree-sha1 = "67db6cc7b3821e19ebe75791a9dd19c9b1188f2b"
+git-tree-sha1 = "cbbebadbcc76c5ca1cc4b4f3b0614b3e603b5000"
 uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
-version = "1.5.1"
+version = "1.5.2"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -1949,6 +1711,11 @@ weakdeps = ["ConstructionBase", "InverseFunctions"]
     ConstructionBaseUnitfulExt = "ConstructionBase"
     InverseFunctionsUnitfulExt = "InverseFunctions"
 
+[[deps.UnsafePointers]]
+git-tree-sha1 = "c81331b3b2e60a982be57c046ec91f599ede674a"
+uuid = "e17b2a0c-0bdf-430a-bd0c-3a23cae4ff39"
+version = "1.0.0"
+
 [[deps.WebP]]
 deps = ["CEnum", "ColorTypes", "FileIO", "FixedPointNumbers", "ImageCore", "libwebp_jll"]
 git-tree-sha1 = "aa1ca3c47f119fbdae8770c29820e5e6119b83f2"
@@ -1967,59 +1734,47 @@ git-tree-sha1 = "b8b243e47228b4a3877f1dd6aee0c5d56db7fcf4"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
 version = "2.13.6+1"
 
-[[deps.XSLT_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll", "Libiconv_jll", "XML2_jll", "Zlib_jll"]
-git-tree-sha1 = "82df486bfc568c29de4a207f7566d6716db6377c"
-uuid = "aed1982a-8fda-507f-9586-7b0439959a61"
-version = "1.1.43+0"
-
 [[deps.XZ_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "6e6f1a4f245f66f93f28e55879f9ba47fed66f36"
+git-tree-sha1 = "fee71455b0aaa3440dfdd54a9a36ccef829be7d4"
 uuid = "ffd25f8a-64ca-5728-b0f7-c24cf3aae800"
-version = "5.8.0+0"
+version = "5.8.1+0"
 
 [[deps.Xorg_libX11_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libxcb_jll", "Xorg_xtrans_jll"]
-git-tree-sha1 = "9dafcee1d24c4f024e7edc92603cedba72118283"
+git-tree-sha1 = "b5899b25d17bf1889d25906fb9deed5da0c15b3b"
 uuid = "4f6342f7-b3d2-589e-9d20-edeb45f2b2bc"
-version = "1.8.6+3"
+version = "1.8.12+0"
 
 [[deps.Xorg_libXau_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "e9216fdcd8514b7072b43653874fd688e4c6c003"
+git-tree-sha1 = "aa1261ebbac3ccc8d16558ae6799524c450ed16b"
 uuid = "0c0b7dd1-d40b-584c-a123-a41640f87eec"
-version = "1.0.12+0"
+version = "1.0.13+0"
 
 [[deps.Xorg_libXdmcp_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "89799ae67c17caa5b3b5a19b8469eeee474377db"
+git-tree-sha1 = "52858d64353db33a56e13c341d7bf44cd0d7b309"
 uuid = "a3789734-cfe1-5b06-b2d0-1dd0d9d62d05"
-version = "1.1.5+0"
+version = "1.1.6+0"
 
 [[deps.Xorg_libXext_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libX11_jll"]
-git-tree-sha1 = "d7155fea91a4123ef59f42c4afb5ab3b4ca95058"
+git-tree-sha1 = "a4c0ee07ad36bf8bbce1c3bb52d21fb1e0b987fb"
 uuid = "1082639a-0dae-5f34-9b06-72781eeb8cb3"
-version = "1.3.6+3"
+version = "1.3.7+0"
 
 [[deps.Xorg_libXrender_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libX11_jll"]
-git-tree-sha1 = "a490c6212a0e90d2d55111ac956f7c4fa9c277a6"
+git-tree-sha1 = "7ed9347888fac59a618302ee38216dd0379c480d"
 uuid = "ea2f1a96-1ddc-540d-b46f-429655e07cfa"
-version = "0.9.11+1"
-
-[[deps.Xorg_libpthread_stubs_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "c57201109a9e4c0585b208bb408bc41d205ac4e9"
-uuid = "14d82f49-176c-5ed1-bb49-ad3f5cbd8c74"
-version = "0.1.2+0"
+version = "0.9.12+0"
 
 [[deps.Xorg_libxcb_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "XSLT_jll", "Xorg_libXau_jll", "Xorg_libXdmcp_jll", "Xorg_libpthread_stubs_jll"]
-git-tree-sha1 = "1a74296303b6524a0472a8cb12d3d87a78eb3612"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libXau_jll", "Xorg_libXdmcp_jll"]
+git-tree-sha1 = "bfcaf7ec088eaba362093393fe11aa141fa15422"
 uuid = "c7cfdc94-dc32-55de-ac96-5a1b8d977c5b"
-version = "1.17.0+3"
+version = "1.17.1+0"
 
 [[deps.Xorg_xtrans_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -2091,6 +1846,12 @@ git-tree-sha1 = "d2408cac540942921e7bd77272c32e58c33d8a77"
 uuid = "c5f90fcd-3b7e-5836-afba-fc50a0988cb2"
 version = "1.5.0+0"
 
+[[deps.micromamba_jll]]
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl"]
+git-tree-sha1 = "b4a5a3943078f9fd11ae0b5ab1bdbf7718617945"
+uuid = "f8abcde7-e9b7-5caa-b8af-a437887ae8e4"
+version = "1.5.8+0"
+
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
@@ -2107,6 +1868,12 @@ deps = ["Artifacts", "Libdl"]
 uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 version = "17.4.0+2"
 
+[[deps.pixi_jll]]
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl"]
+git-tree-sha1 = "f349584316617063160a947a82638f7611a8ef0f"
+uuid = "4d7b5844-a134-5dcd-ac86-c8f19cd51bed"
+version = "0.41.3+0"
+
 [[deps.x264_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "14cc7083fc6dff3cc44f2bc435ee96d06ed79aa7"
@@ -2122,37 +1889,21 @@ version = "3.6.0+0"
 
 # ╔═╡ Cell order:
 # ╟─e6c64c80-773b-11ef-2379-bf6609137e69
-# ╟─737fc5bd-84dc-4873-a741-df5ba70a0393
-# ╟─5c3760d7-9ef7-4b3d-bf9f-91d36a2b0dcb
-# ╟─a84beaa2-7d25-41f8-a97d-5b48f4e5a5aa
-# ╟─63df47b9-093a-48d4-8d0c-d6a4f4d065e1
-# ╟─b4162007-8c09-48c9-b3e3-bed1b95d4d00
-# ╟─fa0d8a3b-dd67-41c1-9600-9c1e9fc5b719
-# ╟─92a1b169-9418-442d-aad6-0c458c866bc3
-# ╟─85568719-bfeb-41c5-a04b-16e1eea442b9
-# ╟─12b1a335-5d4c-4b56-9f7e-69e0153cce02
-# ╟─dd485c1c-c8e6-42da-bcc6-d319ae90bacc
-# ╟─bdce9841-1c95-49ca-b589-36ff85ca598c
-# ╟─dbaff7bc-c319-4fbf-9813-abb0a70d8373
-# ╟─6430a6de-8296-4407-b28e-536abb8e8aac
-# ╟─0296d91d-eb94-4fc2-ab4d-8a062ec8ce64
-# ╟─e023861a-0edf-4c08-980f-8d2fac99683a
-# ╟─b4f14fb7-fa2d-4d4f-bf13-6a33974d142a
-# ╟─3a6854ce-a1da-4291-84f4-eb601b1605da
-# ╟─2fb8417f-6949-41a2-afd9-dcf8d3b938ff
-# ╟─f6d0c5e6-4237-4037-bd9b-b77bb8989afc
-# ╟─ecb8c5a7-4e69-4b2c-bd52-6baa688f5e39
-# ╟─2d4aa703-e3e1-4463-b525-e3294e2dd4a8
-# ╟─fc1cdd4d-75df-46d9-a691-64a0b98df2d3
-# ╟─12f95634-b34b-4f0e-a8f9-72543d922868
-# ╟─80768e73-efbf-455e-a6bf-e3f6b994d692
-# ╟─e5b515de-06d1-4898-a95e-a09db4453549
-# ╟─1b1e0f42-4066-4385-88b1-42463016ef91
-# ╟─4969f593-c0a1-4957-8903-7c14c2c32b03
-# ╟─f69d03b4-a820-4eae-a78c-bb1c9b3df8eb
-# ╟─70fb2ad2-3926-4057-abb1-ad49362c2d21
-# ╟─25892baf-c414-47a1-8a3a-308e1b13ce7c
-# ╟─13372640-c397-4939-a20f-e19ca0c178c0
+# ╟─47d77442-2b73-40c5-8bcc-f25b438012f8
+# ╟─0cad6e6d-6662-4858-82a3-23d55d066424
+# ╟─bb5a14d5-c93c-4a5e-861e-d7cc49bb7ea7
+# ╟─98cffd58-78f2-4c62-bf04-5fc186682e0e
+# ╟─72b08dbf-401a-45bb-9a66-3c9a844bf71a
+# ╟─41eb637c-9d8a-40a9-a1a4-96eed5d7904d
+# ╟─d12af10d-04c9-4965-9ee1-5cd28dd30a18
+# ╟─72720612-42b7-4ea4-a2a2-79b520a62bf6
+# ╟─f26dca14-02f2-4ad6-a91e-c6234f89216e
+# ╟─8def2d7e-82e2-4409-a9be-f621636dbecd
+# ╟─991547f9-8674-408e-9906-44ca3db7f793
+# ╟─cd428691-bea9-41da-910b-df528104e28a
+# ╟─b65bc460-7e9f-4cca-bbbb-93f5422e97f1
+# ╟─0029693d-f80c-4426-8f0f-95b8e2aa7ab2
+# ╟─952172aa-00f4-4796-a5c9-f6caff0ebb23
 # ╟─96351793-9bcc-4376-9c95-b6b42f061ad8
 # ╟─bc148aac-1ef7-4611-b187-72f1255ff05f
 # ╟─92377a23-ac4f-4d5f-9d57-a0a03693307c
@@ -2160,18 +1911,10 @@ version = "3.6.0+0"
 # ╠═42fa44f5-06df-41a1-9b33-71386a0cb6d2
 # ╟─e771a1f9-6813-4383-b34d-83530de4aa2e
 # ╠═f05a5972-58b1-4788-a0a8-24966d6714da
-# ╠═a6fe9276-2d42-4329-b47f-0f55dd857a6c
-# ╠═2f2ccf7b-78f3-4a10-bb77-7bdd5ebd8f2a
-# ╠═44b1f12e-95c7-46e4-b745-f8031f6d0106
-# ╠═770403a3-6ee2-49ef-9b73-3715f9e10467
-# ╠═0721e242-9c29-4840-857b-b04c99efdf58
-# ╠═8138376b-2d90-401e-a1d2-24291e7445b5
-# ╠═84ece4e4-6166-4122-a230-0ca2677f37f2
-# ╠═f900259a-6e46-4673-91b2-96cdb4322d00
-# ╠═18b9502a-3459-4500-814e-c78cf8e7a1f3
-# ╠═6d46d825-662b-48ef-ac25-876d292b9d8f
-# ╠═4bef46dc-4d75-4850-b8a2-57ae1620a516
-# ╠═675deda5-eff9-4287-b288-ea311b729f95
-# ╠═c569f697-82e0-477f-93bf-d7ce2a12c6d9
+# ╠═e21f7893-67e3-42ba-82e8-1297502cc1ea
+# ╠═b0d18f0a-7ae7-4c9e-9e29-2f190aaae1c2
+# ╠═b6bb5da1-e1c2-4b3b-83ca-6cb1ffa4e77e
+# ╠═9bcc8f09-d577-4d68-a1c0-6c74bd31396e
+# ╠═08cbc052-49d7-4cc5-bb76-7c56e709cf15
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
