@@ -4,6 +4,18 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    #! format: off
+    return quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+    #! format: on
+end
+
 # ╔═╡ 1a671459-9b50-4507-b9ab-e78322c0f29a
 using LinearAlgebra
 
@@ -121,6 +133,61 @@ $$\int_{-1.23 \pi}^\pi f(x) \, \mathrm{d} x$$
 
 berechnen wollen, verhält sich die Gauß-Kronrod-Quadratur weniger gut.
 """
+
+# ╔═╡ 85653c95-9cd0-4801-9124-da6a73dd4d19
+md"""
+## Verteilung der Stützstellen der adaptiven Quadratur
+
+Wir betrachten das Integral
+
+$$\int_a^b \sqrt{x}\ \, \mathrm{d}x.$$
+
+Für $a = 0$ liegt eine Singulariät der Ableitungen der Funktion vor,
+sie ist aber immer noch integrierbar. Dies führt dazu, dass die adaptive Quadratur
+viele Stützstellen nahe Null verwenden muss.
+"""
+
+# ╔═╡ 497c4cf3-9dda-4ac6-8a3c-e5200305a042
+md"""
+``a`` = $(@bind a_adaptive Slider(range(0, 0.5, step = 0.01), default = 0, show_value = true))
+
+``b`` = $(@bind b_adaptive Slider(range(0.5, 1, step = 0.1), default = 1, show_value = true))
+"""
+
+# ╔═╡ 16170812-d848-4479-abf4-7c83418adff6
+let f = sqrt, a = a_adaptive, b = b_adaptive
+	exact = 2 / 3 * (sqrt(b_adaptive)^3 - sqrt(a_adaptive)^3)
+
+	fig = Figure()
+	ax = Axis(fig[1, 1]; xlabel = L"x")
+	
+	x = range(0, 1, length = 10^4)
+	f_x = f.(x)
+	lines!(x, f_x; label = L"f(x)")
+	xlims!(ax, -0.1, 1.1)
+
+	# adaptive quadrature
+	points = Vector{Float64}()
+	quadrature, _ = quadgk(a, b) do x
+		push!(points, x)
+		f(x)
+	end
+	scatter!(points, f.(points); label = "Quadratur")
+	err = abs(quadrature - exact)
+	ax.title = @sprintf("Fehler der Quadratur: %.2e", err)
+	
+	# bounds
+	ymin, ymax = extrema(f_x)
+	lines!(ax, [a, a], [ymin, ymax]; color = :gray, linestyle = :dot)
+	text!(ax, L"x = a"; position=(a, ymin), space = :data, 
+		  align = (:right, :top))
+	lines!(ax, [b, b], [ymin, ymax]; color = :gray, linestyle = :dot)
+	text!(ax, L"x = b"; position=(b, ymin), space = :data, 
+		  align = (:left, :top))
+
+	axislegend(ax, position = :lt)
+	fig
+end
 
 # ╔═╡ 4340e86a-e0fe-4cfe-9d1a-9bb686cbb2fd
 md"""
@@ -2032,6 +2099,9 @@ version = "3.6.0+0"
 # ╟─a4494928-5ea2-432c-b495-012d9a3a1a3d
 # ╟─0bd116c6-658c-4ce8-9fa0-0c7a34af7ede
 # ╟─12f64b27-b72a-457d-91d0-c11f73a17c15
+# ╟─85653c95-9cd0-4801-9124-da6a73dd4d19
+# ╟─497c4cf3-9dda-4ac6-8a3c-e5200305a042
+# ╟─16170812-d848-4479-abf4-7c83418adff6
 # ╟─96351793-9bcc-4376-9c95-b6b42f061ad8
 # ╟─bc148aac-1ef7-4611-b187-72f1255ff05f
 # ╟─92377a23-ac4f-4d5f-9d57-a0a03693307c
