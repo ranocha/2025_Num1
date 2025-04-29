@@ -22,7 +22,7 @@ begin
 	using PlutoUI: Slider
 end
 
-# ╔═╡ a6fe9276-2d42-4329-b47f-0f55dd857a6c
+# ╔═╡ e21f7893-67e3-42ba-82e8-1297502cc1ea
 begin
 	using CairoMakie
 	set_theme!(theme_latexfonts();
@@ -33,66 +33,380 @@ begin
 			   Scatter = (cycle = Cycle([:color, :marker], covary = true),))
 end
 
-# ╔═╡ 2f2ccf7b-78f3-4a10-bb77-7bdd5ebd8f2a
+# ╔═╡ b0d18f0a-7ae7-4c9e-9e29-2f190aaae1c2
 using LaTeXStrings
 
-# ╔═╡ b7d3c924-af00-4c9f-97d2-d458a658ce86
-using DoubleFloats
+# ╔═╡ 277322bc-0610-4403-97f0-43b523b228bb
+using LinearAlgebra
 
 # ╔═╡ e6c64c80-773b-11ef-2379-bf6609137e69
 md"""
-# 2.3 Baryzentrische Interpolation
+# 5.0 Lineare Gleichungssysteme
 
-Hier verwenden wir die 2. baryzentrische Formel
-
-$$p(x) =
-\begin{cases}
-	\frac{ \sum_{j=0}^n \frac{w_j y_j}{x - x_j} }
-         { \sum_{j=0}^n \frac{w_j}{x - x_j} }, & x \notin \{x_0, \dots, x_n\},
-  \\
-  y_i, & x = x_i,
-\end{cases}$$
-
-mit den baryzentrischen Gewichten
-
-$$w_i = \frac{1}{\prod_{j \ne i} (x_i - x_j)}$$
-
-zur Polynominterpolation. Obwohl man auf den ersten Blick Probleme
-bei $x \approx x_j$ erwarten würde, ist das Vorgehen stabil. In den folgenden
-Beispielen werten wir die 2. baryzentrische Formel auch an den Stützstellen $x_i$
-sowie den nächst-größeren und -kleineren Fließkommazahlen aus. Außerdem verwenden
-wir verschiedene Datentypen, um die Ergebnisse zu verdeutlichen.
+In diesem Notebook betrachten wir einige Beispiele, die auf den ersten Blick
+ungewöhnlich erscheinen wenn man nur die exakten Vorgehensweisen aus der
+(nicht-numerischen) linearen Algebra kennt.
 """
 
-# ╔═╡ 8f3ea0d6-07db-4fa1-bc38-894b612ab592
+# ╔═╡ 5853ec5e-9b30-4ba4-944c-11421da8dff2
 md"""
-## Sinus
+## Zur Erinnerung: Zahlen am Computer sind manchmal anders als man denkt
+
+Das gilt insbesondere für Fließkommazahlen.
 """
 
-# ╔═╡ cca271ad-391a-4232-9a92-52d9bb353cfa
+# ╔═╡ 75153ab4-916e-4f02-a258-3ec3cb1d2ddf
+0.1 + 0.2 == 0.3
+
+# ╔═╡ e0682fad-8b8f-403e-9979-12ec0a7c992d
+0.1 + 0.2
+
+# ╔═╡ 9c14f590-a8db-4b6c-a794-545f1eb7d95b
 md"""
-$(@bind T_sin Select([Float32, Float64, Double64]))
+Und auch ganze Zahlen werden nur durch endliche viele Stellen repräsentiert,
+sodass man gedanklich in einem Raum $\mathbb{Z}_n$ statt $\mathbb{Z}$ arbeiten
+sollte.
 """
 
-# ╔═╡ 8b2539ae-1078-44fc-9374-684920042c22
+# ╔═╡ 90174146-38e5-4611-90a3-28aa570acb3b
+10^18
+
+# ╔═╡ 29f55722-06db-4645-95af-4bff037e89ff
+10^19
+
+# ╔═╡ fa3f1720-6d76-43ff-9db6-acdb6092969b
+6.022 * 10^23
+
+# ╔═╡ be0fd077-e887-4f7a-9acd-5c735edb5f03
+6.022e23
+
+# ╔═╡ 6319a452-aa01-4d69-b464-7a6bb129612c
 md"""
-``n`` = $(@bind n_sin Slider(1:20, default = 4, show_value = true))
+## Invertierbarkeit und die Determinante
+
+In der linearen Algebra lernt man, dass eine quadratische Matrix
+$A \in \mathbb{C}^{n \times n}$ genau dann invertierbar ist, wenn
+$\det A \ne 0$. Allerdings ist die Determinante kein gutes Kriterium
+dafür, wie gut ein lineares Gleichungssystem lösbar ist.
 """
 
-# ╔═╡ b293a126-5c6c-4156-964b-dce44869dfe4
+# ╔═╡ b4eeb668-4f66-4a55-a662-3b93c077ce8c
 md"""
-## Exponentialfunktion
+### Vandermonde-Matrix zu äquidistanten Stützstellen
+
+Als erstes betrachten wir die Vandermonde-Matrix zu $n+1$ äquidistanten Stützstellen,
+die wir schon bei der Polynominterpolation kennengelernt haben. Konkret nehmen
+wir hier die Stützstellen $0, 1, \dots, n$.
 """
 
-# ╔═╡ 45ea347a-4620-4630-b943-524092cf4b51
+# ╔═╡ 35614561-3f06-4a0b-a7be-75507232ddb0
 md"""
-$(@bind T_exp Select([Float32, Float64, Double64], default = Float64))
+``n`` = $(@bind n_vandermonde Slider(1:20, default = 9, show_value = true))
 """
 
-# ╔═╡ f805fe8b-af87-4bf2-af57-09fc9ea1e00c
+# ╔═╡ 164c8ec2-e122-4370-bf00-3b05c51b57c9
+V = let n = n_vandermonde
+	x = 0:n
+	
+	V = similar(x, BigInt, length(x), length(x))
+	for j in axes(V, 2), i in axes(V, 1)
+		V[i, j] = x[i]^(j - 1)
+	end
+
+	V
+end
+
+# ╔═╡ 85185b39-5983-422d-8a0d-4d1766c1993a
+det(V)
+
+# ╔═╡ 5fb5f8af-f3f9-4de6-9588-21e7609dc484
 md"""
-``n`` = $(@bind n_exp Slider(1:20, default = 4, show_value = true))
+Allerdings haben wir schon bei der Polynominterpolation gesehen, dass wir keine
+stabile Lösung des zugehörigen linearen Gleichungssystems erwarten können. Im
+weiteren Verlauf der Vorlesung werden wir die *Konditionszahl* einer Matrix
+einführen. In diesem Fall haben wir
 """
+
+# ╔═╡ 669d84e7-fad1-4bcd-9e60-9e81b761e046
+cond(V, Inf)
+
+# ╔═╡ d8fcf9a4-6388-4bbe-9933-8577af480c32
+cond(V, 1)
+
+# ╔═╡ 7e81407d-2dbf-497e-ace6-33a4c82ac7c9
+md"""
+### Numerische berechnete Determinante Null einer invertierbaren Matrix
+
+Mit der klassischen Regel von Sarrus berechnen wir die Determinante der folgenden
+Matrix.
+"""
+
+# ╔═╡ 6d424dcd-3895-453e-b44e-41688bc44cb1
+A1 = [1 0 1; 1.0e-8 1 0; 1 1.0e-8 1]
+
+# ╔═╡ 09725378-eb9f-4458-8eab-830448008a25
+let
+	A1[1, 1] * A1[2, 2] * A1[3, 3] +
+	A1[2, 1] * A1[3, 2] * A1[1, 3] +
+	A1[3, 1] * A1[1, 2] * A1[2, 3] -
+	A1[1, 3] * A1[2, 2] * A1[3, 1] -
+	A1[2, 3] * A1[3, 2] * A1[1, 1] -
+	A1[3, 3] * A1[1, 2] * A1[2, 1]
+end
+
+# ╔═╡ 41590b1f-3b37-4231-89e6-7d28f899e3fd
+md"""
+Trotzdem ist die Matrix invertierbar, wenn wir beispielsweise in exakter Arithmetik
+mit rationalen Zahlen rechnen.
+"""
+
+# ╔═╡ 85196e44-ba21-4733-9aff-53545b07b3c5
+rational_A1 = rationalize.(A1)
+
+# ╔═╡ 5f6489a2-7a1b-46d1-80fb-cb6791ddcf5b
+inv(rational_A1)
+
+# ╔═╡ cb5fffa1-4d15-4d83-b4d6-537ae6c82679
+inv(rational_A1) * rational_A1
+
+# ╔═╡ a684ec3c-aa0a-4225-8f23-f77097915c4e
+md"""
+Allerdings sieht die Situation anders aus, wenn wir mit Fließkommazahlen rechnen.
+"""
+
+# ╔═╡ 958fef72-be83-4955-abc9-4a411978196f
+inv(A1)
+
+# ╔═╡ 63ce11ac-9cd6-4e4f-a39d-7b4fa681befb
+inv(A1) * A1
+
+# ╔═╡ af580db4-0479-433a-ba73-34f4da40b6e8
+inv(A1) - inv(rational_A1)
+
+# ╔═╡ f8c54886-d9d9-4bf6-98c0-cd5cdcc5de15
+md"""
+Das liegt daran, dass die Konditionszahl der Matrix sehr hoch ist - im Vergleich zur
+Maschinengenauigkeit von 64-Bit Fließkommazahlen.
+"""
+
+# ╔═╡ f4e68635-9819-4baa-b176-833c5fcee165
+cond(A1)
+
+# ╔═╡ 9859b426-ec27-410c-9373-8d63bfd6dec7
+md"""
+### Vielfache der Einheitsmatrix
+
+Für $A = \alpha \mathrm{I}_n$ mit der Einheitsmatrix $\mathrm{I}_n \in \mathbb{R}^{n \times n}$ ist
+
+$$\det(A) = \det(\alpha \mathrm{I}_n) = \alpha^n.$$
+
+Das kann je nach Wert von $$\alpha$$ beliebige Werte annehmen -- aber das Lösen
+des zugehörigen linearen Gleichungssystems ist nur eine Multiplikation mit $$\alpha{-1}$$, was (in jedem einzelnen skalaren Fall) gut konditioniert ist (bzgl. der relativen Konditionszahl, die wir am Anfang des Semesters bestimmt haben).
+"""
+
+# ╔═╡ a6bafae8-64e9-4192-92f3-7d91fce184cb
+md"""
+### Kleine Störungen
+
+Analog zum Beispiel der skalierten Einheitsmatrix können wir eine Matrix mit kleinen
+Störungen erzeugen, die aufgrund eines großen Skalierungsfaktors trotzdem eine
+Determinante hat, die klar nicht Null ist.
+"""
+
+# ╔═╡ bb5fc113-f04c-4021-b033-256157b8ad4c
+A2 = 1.0e15 * [1 1; 1 1+1.0e-15]
+
+# ╔═╡ ac23c880-cd4b-4342-8551-558781402ebe
+let
+	v = A2 * [1, 1]
+	A2 \ v
+end
+
+# ╔═╡ e032f027-f41d-42d1-a593-52f04da01586
+det(A2)
+
+# ╔═╡ 57e933c8-0b1c-48e4-bae9-3882088ec7f9
+cond(A2)
+
+# ╔═╡ 1651aae1-df98-4029-8dbf-7117bd7e4e8f
+md"""
+### Dreiecksmatrizen
+
+Wir betrachten zwei Dreiecksmatrizen, die sich nur in den Vorzeichen der Terme
+oberhalb der Diagonalen unterscheiden.
+"""
+
+# ╔═╡ b3f0ad2d-de0a-4503-ab9b-be81f3c5e1a4
+md"""
+``n`` = $(@bind n_triangular Slider(union(1:15, 20:10:200), default = 9, show_value = true))
+"""
+
+# ╔═╡ a3574045-e59c-4c69-ae63-7d196d64893c
+U1 = let n = n_triangular
+	U = diagm(ones(n))
+	for j in 1:n, i in 1:(j-1)
+		U[i, j] = -1
+	end
+	U
+end
+
+# ╔═╡ 4858e630-8a43-4991-86d3-317e81451bb7
+U2 = let n = n_triangular
+	U = diagm(ones(n))
+	for j in 1:n, i in 1:(j-1)
+		U[i, j] = 1
+	end
+	U
+end
+
+# ╔═╡ 2905580f-1499-43f1-bba7-fa4ca2d4f60e
+md"""
+Beide Matrizen haben die gleiche Determinante -- welche?
+"""
+
+# ╔═╡ e3885fd3-3f5e-45b0-8e8d-9af617ac99d2
+md"""
+Die Inversen unterscheiden sich allerdings stark.
+"""
+
+# ╔═╡ 8795972a-f3e0-43fa-a577-53c92bad8184
+inv(U1)
+
+# ╔═╡ 765c5280-6eb5-4450-90d6-823b8fac1e9d
+inv(U2)
+
+# ╔═╡ abcec394-5bfe-447c-bf6d-3eb11cdcd8f2
+norm(inv(U1) * U1 - I)
+
+# ╔═╡ 06663f08-a194-4249-962a-2b1dd96746ed
+norm(inv(U2) * U2 - I)
+
+# ╔═╡ 2b176804-0456-466a-b789-ab70b5cd622c
+md"""
+## Hilbert-Matrix
+
+Die [Hilbert-Matrix](https://de.wikipedia.org/wiki/Hilbert-Matrix) $H_n$ ist gegeben durch
+
+$$(H_n)_{i,j} = \frac{1}{i + j - 1}, \quad i,j \in \{1, \dots, n\}.$$
+
+Die Hilbert-Matrix $H_n \in \mathbb{R}^{n \times n}$ ist also symmetrisch.
+Man kann zeigen, dass sie auch positiv definit ist und die Komponenten der
+inversen Matrix gegeben sind durch explizite Ausdrücke ganzer Zahlen.
+Man muss bei der Implementierung allerdings darauf achten, dass diese ganzen
+Zahlen sehr große Beträge haben können!
+"""
+
+# ╔═╡ 02335c8f-f3ae-4d3f-88d7-42140fa8533f
+md"""
+``n`` = $(@bind n_hilbert Slider(union(1:15, 20:10:50), default = 9, show_value = true))
+"""
+
+# ╔═╡ 46aba0b7-58a7-4922-bbd1-6edc8e500056
+H = let n = n_hilbert
+	H = zeros(Rational{BigInt}, n, n)
+	for j in 1:n, i in 1:n
+		H[i, j] = 1 // (i + j - 1)
+	end
+	H
+end
+
+# ╔═╡ 6b63d8c8-4deb-4a32-ad89-7d08e1881b22
+inv_H = let n = n_hilbert
+	inv_H = zeros(Rational{BigInt}, n, n)
+	for j in 1:n, i in 1:n
+		i = big(i)
+		j = big(j)
+		s = iseven(i + j) ? +1 : -1
+		inv_H[i, j] = s * (i + j - 1) *
+						binomial(n + i - 1, n - j) *
+						binomial(n + j - 1, n - i) *
+						binomial(i + j - 2, i - 1)^2
+	end
+	inv_H
+end
+
+# ╔═╡ 4146e244-6562-4aa2-ae62-9bf791edffeb
+inv(H) - inv_H
+
+# ╔═╡ 929139a7-7ba3-43a0-8444-f1ce64c2ad7d
+norm(inv_H * H - I)
+
+# ╔═╡ a08d087d-4df2-4b67-8201-d59e3da7ad5d
+norm(inv(H) * H - I)
+
+# ╔═╡ a1729466-456d-4718-a4d6-9dc18020dc3a
+md"""
+Diese Matrix ist allerdings sehr schlecht konditioniert, was sich bei
+Rechnungen in endlicher Genauigkeit mit Fließkommazahlen zeigt.
+"""
+
+# ╔═╡ eac73594-a926-4014-8b12-b2e80a91e1d7
+cond(H, 1)
+
+# ╔═╡ e2f55390-d69d-4b6e-9471-261d27cbb3f5
+cond(H, Inf)
+
+# ╔═╡ 080a3332-55b4-43d9-9df8-e6c39473766b
+float_H = float.(H)
+
+# ╔═╡ bbf61259-9ec5-4750-9f93-10c307f2526e
+norm(float_H - H)
+
+# ╔═╡ 447c6312-3019-41c2-8082-108c694abc30
+norm(inv(float_H) - inv_H)
+
+# ╔═╡ ec39a6ce-c559-4c6d-abb2-1e8aa336f8b2
+norm(inv(float_H) * float_H - I)
+
+# ╔═╡ cfad8021-cb9b-4f98-b626-062ad9235dc2
+md"""
+## Residuum vs. Fehler
+
+Am Beispiel der Hilbert-Matrix können wir auch schon einen wesentlichen
+Unterschied zwischen dem *Residuum*
+
+$$A \widetilde{x} - b$$
+
+und dem *Fehler*
+
+$$\widetilde{x} - x$$
+
+beim Lösen linearer Gleichungssysteme 
+
+$$A x = b$$
+
+sehen. Dabei ist $x$ die exakte Lösung und $\widetilde{x}$ die numerische berechnete
+Approximation.
+"""
+
+# ╔═╡ 9969225a-3886-4c5e-a112-40a79cf4dd0d
+md"""
+``n`` = $(@bind n_hilbert_2 Slider(union(1:15, 20:10:90), default = 9, show_value = true))
+"""
+
+# ╔═╡ 1023566d-e975-40b8-b275-a9126ecca752
+x_true = ones(n_hilbert_2)
+
+# ╔═╡ 1732e127-1f0e-4dbf-9235-54535ce81061
+A = let n = n_hilbert_2
+	H = zeros(n, n)
+	for j in 1:n, i in 1:n
+		H[i, j] = 1 // (i + j - 1)
+	end
+	H
+end;
+
+# ╔═╡ 3760491e-56fb-48f5-a979-d14430b2f3b6
+b = A * x_true
+
+# ╔═╡ 220f7802-2bf1-4f97-a84e-d2efbdbf5811
+x = A \ b
+
+# ╔═╡ 9bfaaca3-8002-441c-acd0-eefe46492190
+norm(x - x_true)
+
+# ╔═╡ 2643e922-49f2-4b4a-b7be-69de0d881fca
+norm(A * x - b)
 
 # ╔═╡ 4340e86a-e0fe-4cfe-9d1a-9bb686cbb2fd
 md"""
@@ -121,121 +435,16 @@ _First, we will install (and compile) some packages. This can take a few minutes
 """
 
 
-# ╔═╡ 99c45318-62b5-4ab8-b445-103cab69f0d9
-"""
-	barycentric_weights(x)
-
-Given a vector `x` of nodes, compute the associated barycentric weights.
-"""
-function barycentric_weights(x)
-	Base.require_one_based_indexing(x)
-    w = similar(x)
-    fill!(w, one(eltype(w)))
-    
-    for j in 2:length(x)
-        for k in 1:(j - 1)
-            w[k] *= x[k] - x[j]
-            w[j] *= x[j] - x[k]
-        end
-    end
-    
-    @. w = inv(w)
-    return w
-end
-
-# ╔═╡ 4e9326a3-2af6-45ba-932c-1105a594a555
-"""
-	interpolate(x, nodes, values, weights = barycentric_weights(x))
-
-Compute the value of the interpolation polynomial with data
-`nodes, values` at `x` using the barycentric weights `weights`.
-`x` can be a single number or a vector.
-If `weights` is omitted, the barycentric weights are computed
-on the fly.
-"""
-function interpolate(x::Number, nodes, values, weights)
-    num = den = zero(eltype(values))
-    
-    for j in eachindex(nodes, values, weights)
-		# Although one should in general never compare floating point
-		# number for exact identity, it is okay to do so here.
-		# See Berrut, Trefethen (2004), Higham (2004) and related
-		# references.
-        if x == nodes[j] # not x ≈ nodes[j] !
-            return values[j]
-        else
-            t = weights[j] / (x - nodes[j])
-            num += t * values[j]
-            den += t
-        end
-    end
-    
-    return num / den
-end
-
-# ╔═╡ 8ce71a75-74d8-4cfd-9ca8-42a096576dff
-function interpolate(x, nodes, values, weights)
-    f = similar(x)
-    for i in eachindex(x, f)
-        f[i] = interpolate(x[i], nodes, values, weights)
-    end
-    return f
-end
-
-# ╔═╡ 4b4b7fe0-583f-4653-89b1-780ef645f5b9
-function interpolate(x, nodes, values)
-    weights = barycentric_weights(nodes)
-    return interpolate(x, nodes, values, weights)
-end
-
-# ╔═╡ 088961ba-5915-4f41-8394-e724bc792d20
-function plot_interpolation(f, x; legendpos = :lt)
-	x_plot = range(extrema(x)..., length = 5000)
-	if x_plot[begin] <= 0 <= x_plot[end]
-		x_plot = vcat(x_plot, floatmin(eltype(x_plot)), -floatmin(eltype(x_plot)))
-	end
-	x_plot = sort(vcat(x_plot, x, map(prevfloat, x), map(nextfloat, x)))
-	f_int = interpolate(x_plot, x, f.(x), barycentric_weights(x))
-
-	fig = Figure()
-	ax = Axis(fig[1, 1]; xlabel = L"x")
-	scatter!(ax, x, f.(x); label = L"(x_i, f_i)")
-	lines!(ax, x_plot, f_int; label = "Interpolationspolynom")
-	f_plot = f.(x_plot)
-	lines!(ax, x_plot, f_plot; label = L"f")
-	axislegend(ax; position = legendpos)
-
-	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
-	linkxaxes!(ax, ax_error)
-	max_error = @. abs(f_plot - f_int) + eps(eltype(f_plot))
-	lines!(ax_error, x_plot, max_error; label = "Fehler")
-	
-	return fig
-end
-
-# ╔═╡ a6368e01-97b6-42e1-bdd0-ec074d0880ed
-let n = n_sin, T = T_sin
-	x = range(-T(π), T(π), length = n + 1)
-	plot_interpolation(sin, x)
-end
-
-# ╔═╡ b843718d-33a0-4d25-862b-fb59b12c2d79
-let n = n_exp, T = T_exp
-	x = range(zero(T), one(T), length = n + 1)
-	plot_interpolation(exp, x)
-end
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-DoubleFloats = "497a8b3b-efae-58df-a0af-a86822472b78"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
-CairoMakie = "~0.13.2"
-DoubleFloats = "~1.4.3"
+CairoMakie = "~0.13.4"
 LaTeXStrings = "~1.4.0"
 PlutoUI = "~0.7.62"
 """
@@ -246,7 +455,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.9"
 manifest_format = "2.0"
-project_hash = "b3b31eb438fcc9d35bce41fe89c7e7a5b000d405"
+project_hash = "483dd2e538c54fdbfe6a8c07abc9bf59cb5a41f6"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -354,9 +563,9 @@ version = "1.1.1"
 
 [[deps.CairoMakie]]
 deps = ["CRC32c", "Cairo", "Cairo_jll", "Colors", "FileIO", "FreeType", "GeometryBasics", "LinearAlgebra", "Makie", "PrecompileTools"]
-git-tree-sha1 = "15d6504f47633ee9b63be11a0384925ba0c84f61"
+git-tree-sha1 = "c1c90ea6bba91f769a8fc3ccda802e96620eb24c"
 uuid = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-version = "0.13.2"
+version = "0.13.4"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
@@ -471,9 +680,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["AliasTables", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns"]
-git-tree-sha1 = "0b4190661e8a4e51a842070e7dd4fae440ddb7f4"
+git-tree-sha1 = "6d8b535fd38293bc54b88455465a1386f8ac1c3c"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.118"
+version = "0.25.119"
 
     [deps.Distributions.extensions]
     DistributionsChainRulesCoreExt = "ChainRulesCore"
@@ -489,12 +698,6 @@ version = "0.25.118"
 git-tree-sha1 = "e7b7e6f178525d17c720ab9c081e4ef04429f860"
 uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 version = "0.9.4"
-
-[[deps.DoubleFloats]]
-deps = ["GenericLinearAlgebra", "LinearAlgebra", "Polynomials", "Printf", "Quadmath", "Random", "Requires", "SpecialFunctions"]
-git-tree-sha1 = "1ee9bc92a6b862a5ad556c52a3037249209bec1a"
-uuid = "497a8b3b-efae-58df-a0af-a86822472b78"
-version = "1.4.3"
 
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
@@ -628,19 +831,9 @@ version = "0.10.6"
 
 [[deps.FriBidi_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "846f7026a9decf3679419122b49f8a1fdb48d2d5"
+git-tree-sha1 = "7a214fdac5ed5f59a22c2d9a885a16da1c74bbc7"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
-version = "1.0.16+0"
-
-[[deps.Future]]
-deps = ["Random"]
-uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
-
-[[deps.GenericLinearAlgebra]]
-deps = ["LinearAlgebra", "Printf", "Random", "libblastrampoline_jll"]
-git-tree-sha1 = "54ee4866eb8c982ee23cf79230ca0aaf916c382b"
-uuid = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
-version = "0.3.15"
+version = "1.0.17+0"
 
 [[deps.GeoFormatTypes]]
 git-tree-sha1 = "8e233d5167e63d708d41f87597433f59a0f213fe"
@@ -798,9 +991,9 @@ weakdeps = ["Unitful"]
 
 [[deps.IntervalArithmetic]]
 deps = ["CRlibm_jll", "LinearAlgebra", "MacroTools", "OpenBLASConsistentFPCSR_jll", "RoundingEmulator"]
-git-tree-sha1 = "5aad168b75fc3b6b25e99feb1e6e3168d41e4c08"
+git-tree-sha1 = "2c337f943879911c74bb62c927b65b9546552316"
 uuid = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
-version = "0.22.28"
+version = "0.22.29"
 
     [deps.IntervalArithmetic.extensions]
     IntervalArithmeticDiffRulesExt = "DiffRules"
@@ -818,12 +1011,16 @@ version = "0.22.28"
 git-tree-sha1 = "dba9ddf07f77f60450fe5d2e2beb9854d9a49bd0"
 uuid = "8197267c-284f-5f27-9208-e0e47529a953"
 version = "0.7.10"
-weakdeps = ["Random", "RecipesBase", "Statistics"]
 
     [deps.IntervalSets.extensions]
     IntervalSetsRandomExt = "Random"
     IntervalSetsRecipesBaseExt = "RecipesBase"
     IntervalSetsStatisticsExt = "Statistics"
+
+    [deps.IntervalSets.weakdeps]
+    Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+    RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+    Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[deps.InverseFunctions]]
 git-tree-sha1 = "a779299d77cd080bf77b97535acecd73e1c5e5cb"
@@ -957,23 +1154,11 @@ git-tree-sha1 = "27ecae93dd25ee0909666e6835051dd684cc035e"
 uuid = "e9f186c6-92d2-5b65-8a66-fee21dc1b490"
 version = "3.2.2+2"
 
-[[deps.Libgcrypt_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgpg_error_jll"]
-git-tree-sha1 = "d77592fa54ad343c5043b6f38a03f1a3c3959ffe"
-uuid = "d4300ac3-e22c-5743-9152-c294e39db1e4"
-version = "1.11.1+0"
-
 [[deps.Libglvnd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libX11_jll", "Xorg_libXext_jll"]
-git-tree-sha1 = "ff3b4b9d35de638936a525ecd36e86a8bb919d11"
+git-tree-sha1 = "d36c21b9e7c172a44a10484125024495e2625ac0"
 uuid = "7e76a0d4-f3c7-5321-8279-8d96eeed0f29"
-version = "1.7.0+0"
-
-[[deps.Libgpg_error_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "df37206100d39f79b3376afb6b9cee4970041c61"
-uuid = "7add5ba3-2f88-524e-9cd5-f83b8a55f7b8"
-version = "1.51.1+0"
+version = "1.7.1+1"
 
 [[deps.Libiconv_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1034,21 +1219,21 @@ uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
 version = "2025.0.1+1"
 
 [[deps.MacroTools]]
-git-tree-sha1 = "72aebe0b5051e5143a079a4685a46da330a40472"
+git-tree-sha1 = "1e0228a030642014fe5cfe68c2c0a818f9e3f522"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.15"
+version = "0.5.16"
 
 [[deps.Makie]]
 deps = ["Animations", "Base64", "CRC32c", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Dates", "DelaunayTriangulation", "Distributions", "DocStringExtensions", "Downloads", "FFMPEG_jll", "FileIO", "FilePaths", "FixedPointNumbers", "Format", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageBase", "ImageIO", "InteractiveUtils", "Interpolations", "IntervalSets", "InverseFunctions", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MacroTools", "MakieCore", "Markdown", "MathTeXEngine", "Observables", "OffsetArrays", "PNGFiles", "Packing", "PlotUtils", "PolygonOps", "PrecompileTools", "Printf", "REPL", "Random", "RelocatableFolders", "Scratch", "ShaderAbstractions", "Showoff", "SignedDistanceFields", "SparseArrays", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "TriplotBase", "UnicodeFun", "Unitful"]
-git-tree-sha1 = "e64b545d25e05a609521bfc36724baa072bfd31a"
+git-tree-sha1 = "0318d174aa9ec593ddf6dc340b434657a8f1e068"
 uuid = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-version = "0.22.2"
+version = "0.22.4"
 
 [[deps.MakieCore]]
 deps = ["ColorTypes", "GeometryBasics", "IntervalSets", "Observables"]
-git-tree-sha1 = "605d6e8f2b7eba7f5bc6a16d297475075d5ea775"
+git-tree-sha1 = "903ef1d9d326ebc4a9e6cf24f22194d8da022b50"
 uuid = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
-version = "0.9.1"
+version = "0.9.2"
 
 [[deps.MappedArrays]]
 git-tree-sha1 = "2dab0221fe2b0f2cb6754eaa743cc266339f527e"
@@ -1061,9 +1246,9 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[deps.MathTeXEngine]]
 deps = ["AbstractTrees", "Automa", "DataStructures", "FreeTypeAbstraction", "GeometryBasics", "LaTeXStrings", "REPL", "RelocatableFolders", "UnicodeFun"]
-git-tree-sha1 = "f45c8916e8385976e1ccd055c9874560c257ab13"
+git-tree-sha1 = "f5a6805fb46c0285991009b526ec6fae43c6dec2"
 uuid = "0a4f8689-d25c-4efe-a92b-7142dfc1aa53"
-version = "0.6.2"
+version = "0.6.3"
 
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1111,9 +1296,9 @@ uuid = "510215fc-4207-5dde-b226-833fc4488ee2"
 version = "0.5.5"
 
 [[deps.OffsetArrays]]
-git-tree-sha1 = "a414039192a155fb38c4599a60110f0018c6ec82"
+git-tree-sha1 = "117432e406b5c023f665fa73dc26e79ec3630151"
 uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
-version = "1.16.0"
+version = "1.17.0"
 weakdeps = ["Adapt"]
 
     [deps.OffsetArrays.extensions]
@@ -1183,9 +1368,9 @@ version = "10.42.0+1"
 
 [[deps.PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "48566789a6d5f6492688279e22445002d171cf76"
+git-tree-sha1 = "0e1340b5d98971513bddaa6bbed470670cebbbfe"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
-version = "0.11.33"
+version = "0.11.34"
 
 [[deps.PNGFiles]]
 deps = ["Base64", "CEnum", "ImageCore", "IndirectArrays", "OffsetArrays", "libpng_jll"]
@@ -1213,9 +1398,9 @@ version = "1.56.1+0"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
-git-tree-sha1 = "8489905bcdbcfac64d1daa51ca07c0d8f0283821"
+git-tree-sha1 = "44f6c1f38f77cafef9450ff93946c53bd9ca16ff"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.8.1"
+version = "2.8.2"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "LLVMOpenMP_jll", "Libdl"]
@@ -1250,24 +1435,6 @@ version = "0.7.62"
 git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
 uuid = "647866c9-e3ac-4575-94e7-e3d426903924"
 version = "0.1.2"
-
-[[deps.Polynomials]]
-deps = ["LinearAlgebra", "OrderedCollections", "RecipesBase", "Requires", "Setfield", "SparseArrays"]
-git-tree-sha1 = "555c272d20fc80a2658587fb9bbda60067b93b7c"
-uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
-version = "4.0.19"
-
-    [deps.Polynomials.extensions]
-    PolynomialsChainRulesCoreExt = "ChainRulesCore"
-    PolynomialsFFTWExt = "FFTW"
-    PolynomialsMakieCoreExt = "MakieCore"
-    PolynomialsMutableArithmeticsExt = "MutableArithmetics"
-
-    [deps.Polynomials.weakdeps]
-    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-    FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
-    MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
-    MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -1314,12 +1481,6 @@ version = "2.11.2"
     [deps.QuadGK.weakdeps]
     Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 
-[[deps.Quadmath]]
-deps = ["Compat", "Printf", "Random", "Requires"]
-git-tree-sha1 = "a03445b1a295fa37027ab23e8ff9a74b350f3fe2"
-uuid = "be4d8f0f-7fa4-5f49-b795-2f01399ab2dd"
-version = "0.5.11"
-
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
@@ -1342,12 +1503,6 @@ weakdeps = ["FixedPointNumbers"]
 
     [deps.Ratios.extensions]
     RatiosFixedPointNumbersExt = "FixedPointNumbers"
-
-[[deps.RecipesBase]]
-deps = ["PrecompileTools"]
-git-tree-sha1 = "5c3d09cc4f31f5fc6af001c250bf1278733100ff"
-uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-version = "1.3.4"
 
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
@@ -1402,12 +1557,6 @@ version = "1.2.1"
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
-[[deps.Setfield]]
-deps = ["ConstructionBase", "Future", "MacroTools", "StaticArraysCore"]
-git-tree-sha1 = "c5391c6ace3bc430ca630251d02ea9687169ca68"
-uuid = "efcf1570-3423-57d1-acb7-fd33fddbac46"
-version = "1.1.2"
-
 [[deps.ShaderAbstractions]]
 deps = ["ColorTypes", "FixedPointNumbers", "GeometryBasics", "LinearAlgebra", "Observables", "StaticArrays"]
 git-tree-sha1 = "818554664a2e01fc3784becb2eb3a82326a604b6"
@@ -1458,9 +1607,9 @@ version = "1.10.0"
 
 [[deps.SpecialFunctions]]
 deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
-git-tree-sha1 = "64cca0c26b4f31ba18f13f6c12af7c85f478cfde"
+git-tree-sha1 = "41852b8679f78c8d8961eeadc8f62cef861a52e3"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "2.5.0"
+version = "2.5.1"
 weakdeps = ["ChainRulesCore"]
 
     [deps.SpecialFunctions.extensions]
@@ -1606,9 +1755,9 @@ uuid = "981d1d27-644d-49a2-9326-4793e63143c3"
 version = "0.1.0"
 
 [[deps.URIs]]
-git-tree-sha1 = "67db6cc7b3821e19ebe75791a9dd19c9b1188f2b"
+git-tree-sha1 = "cbbebadbcc76c5ca1cc4b4f3b0614b3e603b5000"
 uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
-version = "1.5.1"
+version = "1.5.2"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -1652,59 +1801,47 @@ git-tree-sha1 = "b8b243e47228b4a3877f1dd6aee0c5d56db7fcf4"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
 version = "2.13.6+1"
 
-[[deps.XSLT_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll", "Libiconv_jll", "XML2_jll", "Zlib_jll"]
-git-tree-sha1 = "82df486bfc568c29de4a207f7566d6716db6377c"
-uuid = "aed1982a-8fda-507f-9586-7b0439959a61"
-version = "1.1.43+0"
-
 [[deps.XZ_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "6e6f1a4f245f66f93f28e55879f9ba47fed66f36"
+git-tree-sha1 = "fee71455b0aaa3440dfdd54a9a36ccef829be7d4"
 uuid = "ffd25f8a-64ca-5728-b0f7-c24cf3aae800"
-version = "5.8.0+0"
+version = "5.8.1+0"
 
 [[deps.Xorg_libX11_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libxcb_jll", "Xorg_xtrans_jll"]
-git-tree-sha1 = "9dafcee1d24c4f024e7edc92603cedba72118283"
+git-tree-sha1 = "b5899b25d17bf1889d25906fb9deed5da0c15b3b"
 uuid = "4f6342f7-b3d2-589e-9d20-edeb45f2b2bc"
-version = "1.8.6+3"
+version = "1.8.12+0"
 
 [[deps.Xorg_libXau_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "e9216fdcd8514b7072b43653874fd688e4c6c003"
+git-tree-sha1 = "aa1261ebbac3ccc8d16558ae6799524c450ed16b"
 uuid = "0c0b7dd1-d40b-584c-a123-a41640f87eec"
-version = "1.0.12+0"
+version = "1.0.13+0"
 
 [[deps.Xorg_libXdmcp_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "89799ae67c17caa5b3b5a19b8469eeee474377db"
+git-tree-sha1 = "52858d64353db33a56e13c341d7bf44cd0d7b309"
 uuid = "a3789734-cfe1-5b06-b2d0-1dd0d9d62d05"
-version = "1.1.5+0"
+version = "1.1.6+0"
 
 [[deps.Xorg_libXext_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libX11_jll"]
-git-tree-sha1 = "d7155fea91a4123ef59f42c4afb5ab3b4ca95058"
+git-tree-sha1 = "a4c0ee07ad36bf8bbce1c3bb52d21fb1e0b987fb"
 uuid = "1082639a-0dae-5f34-9b06-72781eeb8cb3"
-version = "1.3.6+3"
+version = "1.3.7+0"
 
 [[deps.Xorg_libXrender_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libX11_jll"]
-git-tree-sha1 = "a490c6212a0e90d2d55111ac956f7c4fa9c277a6"
+git-tree-sha1 = "7ed9347888fac59a618302ee38216dd0379c480d"
 uuid = "ea2f1a96-1ddc-540d-b46f-429655e07cfa"
-version = "0.9.11+1"
-
-[[deps.Xorg_libpthread_stubs_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "c57201109a9e4c0585b208bb408bc41d205ac4e9"
-uuid = "14d82f49-176c-5ed1-bb49-ad3f5cbd8c74"
-version = "0.1.2+0"
+version = "0.9.12+0"
 
 [[deps.Xorg_libxcb_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "XSLT_jll", "Xorg_libXau_jll", "Xorg_libXdmcp_jll", "Xorg_libpthread_stubs_jll"]
-git-tree-sha1 = "1a74296303b6524a0472a8cb12d3d87a78eb3612"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libXau_jll", "Xorg_libXdmcp_jll"]
+git-tree-sha1 = "bfcaf7ec088eaba362093393fe11aa141fa15422"
 uuid = "c7cfdc94-dc32-55de-ac96-5a1b8d977c5b"
-version = "1.17.0+3"
+version = "1.17.1+0"
 
 [[deps.Xorg_xtrans_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1807,14 +1944,73 @@ version = "3.6.0+0"
 
 # ╔═╡ Cell order:
 # ╟─e6c64c80-773b-11ef-2379-bf6609137e69
-# ╟─8f3ea0d6-07db-4fa1-bc38-894b612ab592
-# ╟─cca271ad-391a-4232-9a92-52d9bb353cfa
-# ╟─8b2539ae-1078-44fc-9374-684920042c22
-# ╟─a6368e01-97b6-42e1-bdd0-ec074d0880ed
-# ╟─b293a126-5c6c-4156-964b-dce44869dfe4
-# ╟─45ea347a-4620-4630-b943-524092cf4b51
-# ╟─f805fe8b-af87-4bf2-af57-09fc9ea1e00c
-# ╟─b843718d-33a0-4d25-862b-fb59b12c2d79
+# ╟─5853ec5e-9b30-4ba4-944c-11421da8dff2
+# ╠═75153ab4-916e-4f02-a258-3ec3cb1d2ddf
+# ╠═e0682fad-8b8f-403e-9979-12ec0a7c992d
+# ╟─9c14f590-a8db-4b6c-a794-545f1eb7d95b
+# ╠═90174146-38e5-4611-90a3-28aa570acb3b
+# ╠═29f55722-06db-4645-95af-4bff037e89ff
+# ╠═fa3f1720-6d76-43ff-9db6-acdb6092969b
+# ╠═be0fd077-e887-4f7a-9acd-5c735edb5f03
+# ╟─6319a452-aa01-4d69-b464-7a6bb129612c
+# ╟─b4eeb668-4f66-4a55-a662-3b93c077ce8c
+# ╟─35614561-3f06-4a0b-a7be-75507232ddb0
+# ╟─164c8ec2-e122-4370-bf00-3b05c51b57c9
+# ╠═85185b39-5983-422d-8a0d-4d1766c1993a
+# ╟─5fb5f8af-f3f9-4de6-9588-21e7609dc484
+# ╠═669d84e7-fad1-4bcd-9e60-9e81b761e046
+# ╠═d8fcf9a4-6388-4bbe-9933-8577af480c32
+# ╟─7e81407d-2dbf-497e-ace6-33a4c82ac7c9
+# ╠═6d424dcd-3895-453e-b44e-41688bc44cb1
+# ╠═09725378-eb9f-4458-8eab-830448008a25
+# ╟─41590b1f-3b37-4231-89e6-7d28f899e3fd
+# ╠═85196e44-ba21-4733-9aff-53545b07b3c5
+# ╠═5f6489a2-7a1b-46d1-80fb-cb6791ddcf5b
+# ╠═cb5fffa1-4d15-4d83-b4d6-537ae6c82679
+# ╟─a684ec3c-aa0a-4225-8f23-f77097915c4e
+# ╠═958fef72-be83-4955-abc9-4a411978196f
+# ╠═63ce11ac-9cd6-4e4f-a39d-7b4fa681befb
+# ╠═af580db4-0479-433a-ba73-34f4da40b6e8
+# ╟─f8c54886-d9d9-4bf6-98c0-cd5cdcc5de15
+# ╠═f4e68635-9819-4baa-b176-833c5fcee165
+# ╟─9859b426-ec27-410c-9373-8d63bfd6dec7
+# ╟─a6bafae8-64e9-4192-92f3-7d91fce184cb
+# ╠═bb5fc113-f04c-4021-b033-256157b8ad4c
+# ╠═ac23c880-cd4b-4342-8551-558781402ebe
+# ╠═e032f027-f41d-42d1-a593-52f04da01586
+# ╠═57e933c8-0b1c-48e4-bae9-3882088ec7f9
+# ╟─1651aae1-df98-4029-8dbf-7117bd7e4e8f
+# ╟─b3f0ad2d-de0a-4503-ab9b-be81f3c5e1a4
+# ╟─a3574045-e59c-4c69-ae63-7d196d64893c
+# ╟─4858e630-8a43-4991-86d3-317e81451bb7
+# ╟─2905580f-1499-43f1-bba7-fa4ca2d4f60e
+# ╟─e3885fd3-3f5e-45b0-8e8d-9af617ac99d2
+# ╠═8795972a-f3e0-43fa-a577-53c92bad8184
+# ╠═765c5280-6eb5-4450-90d6-823b8fac1e9d
+# ╠═abcec394-5bfe-447c-bf6d-3eb11cdcd8f2
+# ╠═06663f08-a194-4249-962a-2b1dd96746ed
+# ╟─2b176804-0456-466a-b789-ab70b5cd622c
+# ╟─02335c8f-f3ae-4d3f-88d7-42140fa8533f
+# ╟─46aba0b7-58a7-4922-bbd1-6edc8e500056
+# ╟─6b63d8c8-4deb-4a32-ad89-7d08e1881b22
+# ╠═4146e244-6562-4aa2-ae62-9bf791edffeb
+# ╠═929139a7-7ba3-43a0-8444-f1ce64c2ad7d
+# ╠═a08d087d-4df2-4b67-8201-d59e3da7ad5d
+# ╟─a1729466-456d-4718-a4d6-9dc18020dc3a
+# ╠═eac73594-a926-4014-8b12-b2e80a91e1d7
+# ╠═e2f55390-d69d-4b6e-9471-261d27cbb3f5
+# ╠═080a3332-55b4-43d9-9df8-e6c39473766b
+# ╠═bbf61259-9ec5-4750-9f93-10c307f2526e
+# ╠═447c6312-3019-41c2-8082-108c694abc30
+# ╠═ec39a6ce-c559-4c6d-abb2-1e8aa336f8b2
+# ╟─cfad8021-cb9b-4f98-b626-062ad9235dc2
+# ╟─9969225a-3886-4c5e-a112-40a79cf4dd0d
+# ╟─1023566d-e975-40b8-b275-a9126ecca752
+# ╠═3760491e-56fb-48f5-a979-d14430b2f3b6
+# ╠═220f7802-2bf1-4f97-a84e-d2efbdbf5811
+# ╠═2643e922-49f2-4b4a-b7be-69de0d881fca
+# ╠═9bfaaca3-8002-441c-acd0-eefe46492190
+# ╟─1732e127-1f0e-4dbf-9235-54535ce81061
 # ╟─96351793-9bcc-4376-9c95-b6b42f061ad8
 # ╟─bc148aac-1ef7-4611-b187-72f1255ff05f
 # ╟─92377a23-ac4f-4d5f-9d57-a0a03693307c
@@ -1822,13 +2018,8 @@ version = "3.6.0+0"
 # ╠═42fa44f5-06df-41a1-9b33-71386a0cb6d2
 # ╟─e771a1f9-6813-4383-b34d-83530de4aa2e
 # ╠═f05a5972-58b1-4788-a0a8-24966d6714da
-# ╠═a6fe9276-2d42-4329-b47f-0f55dd857a6c
-# ╠═2f2ccf7b-78f3-4a10-bb77-7bdd5ebd8f2a
-# ╠═b7d3c924-af00-4c9f-97d2-d458a658ce86
-# ╠═99c45318-62b5-4ab8-b445-103cab69f0d9
-# ╠═4e9326a3-2af6-45ba-932c-1105a594a555
-# ╠═8ce71a75-74d8-4cfd-9ca8-42a096576dff
-# ╠═4b4b7fe0-583f-4653-89b1-780ef645f5b9
-# ╠═088961ba-5915-4f41-8394-e724bc792d20
+# ╠═e21f7893-67e3-42ba-82e8-1297502cc1ea
+# ╠═b0d18f0a-7ae7-4c9e-9e29-2f190aaae1c2
+# ╠═277322bc-0610-4403-97f0-43b523b228bb
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
