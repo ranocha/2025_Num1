@@ -166,7 +166,7 @@ md"""
 Als nächstes vergleichen wir das Ergebnis der Polynominterpolation an
 Chebyshev-Extremstellen mit der Taylor-Entwicklung um $x_0 = 0$ der glatten Funktion
 
-$$f\colon [-1, 1] \to \mathbb{R}, \qquad f(x) = \mathrm{e}^{\sin(x)}.$$
+$$f\colon [-1, 1] \to \mathbb{R}, \qquad f(x) = \mathrm{e}^{\sin(\pi x)}.$$
 """
 
 # ╔═╡ 2d4aa703-e3e1-4463-b525-e3294e2dd4a8
