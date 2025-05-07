@@ -304,7 +304,7 @@ let f = sign, n = n_sign
 
 	fourier_c = fourier_coefficients(f, n)
 	fourier_x = evaluate_fourier_coefficients(x, fourier_c)
-	lines!(ax, x, fourier_x; label = L"L_n(x)", linestyle = :dot,
+	lines!(ax, x, fourier_x; label = L"F_n(x)", linestyle = :dot,
 		   color = Makie.wong_colors()[2])
 
 	ylims!(ax, -1.3, 1.3)
@@ -317,8 +317,9 @@ let f = sign, n = n_sign
 	# max_error = @. abs(f_x - taylor_x) + eps()
 	# lines!(ax_error, x, max_error; label = L"T_n(x;\, x_0)", linestyle = :dash)
 	
+	f_x[idx] = 0
 	max_error = @. abs(f_x - fourier_x) + eps()
-	lines!(ax_error, x, max_error; label = L"L_n(x)", linestyle = :dot,
+	lines!(ax_error, x, max_error; label = L"F_n(x)", linestyle = :dot,
 		   color = Makie.wong_colors()[2])
 	
 	axislegend(position = :lt)

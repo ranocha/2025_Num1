@@ -339,6 +339,7 @@ let f = sign, n = n_sign
 	axislegend(position = :lt)
 
 	
+	f_x[idx] = 0
 	ax_error = Axis(fig[2, 1]; xlabel = L"x", ylabel = "Fehler", yscale = log10)
 	linkxaxes!(ax, ax_error)
 	
