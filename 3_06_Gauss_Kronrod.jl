@@ -56,7 +56,7 @@ using QuadGK
 
 # ╔═╡ e6c64c80-773b-11ef-2379-bf6609137e69
 md"""
-# 3.3 Adaptive Gauß-Kronrod-Quadratur
+# 3.6 Adaptive Gauß-Kronrod-Quadratur
 
 Wir vergleichen die adaptive Gauß-Kronrod-Quadratur mit anderen Quadraturen.
 """

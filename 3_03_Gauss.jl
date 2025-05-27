@@ -89,6 +89,30 @@ dann konvergiert die Gauß-Legendre-Quadratur nicht unbedingt schneller als die
 Clenshaw-Curtis-Quadratur.
 """
 
+# ╔═╡ 45d16dee-e05d-49ec-8f65-0f34908e5168
+let
+	f(x) = exp(-1 / x^2)
+	a = -10.0
+	b = 10.0
+	x = range(a, b, length = 1000)
+
+	fig = Figure()
+	ax = Axis(fig[1, 1]; xlabel = L"x", ylabel = L"f(x)")
+
+	lines!(x, f.(x))
+
+	fig
+end
+
+# ╔═╡ 8dfdf945-e202-4f5b-a71b-593bb3bf2dad
+md"""
+Hier approximieren wir
+
+$$\int_{-1}^1 \mathrm{e}^{-1 / x^2} \mathrm{d} x$$
+
+durch verschiedene Quadraturen.
+"""
+
 # ╔═╡ 1ad81d90-bb0e-49c0-876a-e4a1ec91176f
 md"""
 ## Eine $C^2$-Funktion
@@ -1986,6 +2010,8 @@ version = "3.6.0+0"
 # ╟─f56e2a5f-75c3-4a1f-8862-a7982223e71c
 # ╟─8ccaaa83-d2ad-4640-ad33-d6f781fe724b
 # ╟─0634a8d5-ea80-4320-9133-2e9fb6ac6325
+# ╟─45d16dee-e05d-49ec-8f65-0f34908e5168
+# ╟─8dfdf945-e202-4f5b-a71b-593bb3bf2dad
 # ╟─8bea0c39-d566-46f3-a6ef-5c3cbe8c8374
 # ╟─1ad81d90-bb0e-49c0-876a-e4a1ec91176f
 # ╟─c05640f6-5d54-488f-aaef-6bfa22326d7a

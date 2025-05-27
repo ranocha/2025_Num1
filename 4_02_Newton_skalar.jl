@@ -41,7 +41,7 @@ using Enzyme
 
 # ╔═╡ e6c64c80-773b-11ef-2379-bf6609137e69
 md"""
-# 2.2 Das skalare Newton-Verfahren
+# 4.2 Das skalare Newton-Verfahren
 
 Wir vergleichen das *Newton-Verfahren* mit dem *Bisektionsverfahren* 
 aus Abschnitt 4.1 zur Berechnung von Quadratwurzeln. Dazu betrachten wir
@@ -106,9 +106,6 @@ f1(x) = exp(x) - 1
 md"""
 `maxiter_f1` = $(@bind maxiter_f1 Slider(0:20, default = 0, show_value = true))
 """
-
-# ╔═╡ e239d340-16d5-497f-8bec-cc935968cce9
-newton(f1, 1.0, maxiter_f1)
 
 # ╔═╡ 33f52b5b-2e78-4579-89b3-d110d26f8d89
 md"""
@@ -238,6 +235,9 @@ function newton(f, x0, maxiters)
 	end
 	return x
 end
+
+# ╔═╡ e239d340-16d5-497f-8bec-cc935968cce9
+newton(f1, 1.0, maxiter_f1)
 
 # ╔═╡ 45063ee8-e885-46e4-a0fa-c62b3c228645
 newton(f1, 10.0, maxiter_f1)
