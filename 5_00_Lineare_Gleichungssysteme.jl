@@ -347,7 +347,7 @@ cond(H, 1)
 cond(H, Inf)
 
 # ╔═╡ 080a3332-55b4-43d9-9df8-e6c39473766b
-float_H = float.(H)
+float_H = Float64.(H)
 
 # ╔═╡ bbf61259-9ec5-4750-9f93-10c307f2526e
 norm(float_H - H)
