@@ -216,6 +216,9 @@ Determinante hat, die klar nicht Null ist.
 # ╔═╡ bb5fc113-f04c-4021-b033-256157b8ad4c
 A2 = 1.0e15 * [1 1; 1 1+1.0e-15]
 
+# ╔═╡ ca2bf496-d24c-4813-81cb-a643a8ed73ad
+A2[2,2]
+
 # ╔═╡ ac23c880-cd4b-4342-8551-558781402ebe
 let
 	v = A2 * [1, 1]
@@ -1976,6 +1979,7 @@ version = "3.6.0+0"
 # ╟─9859b426-ec27-410c-9373-8d63bfd6dec7
 # ╟─a6bafae8-64e9-4192-92f3-7d91fce184cb
 # ╠═bb5fc113-f04c-4021-b033-256157b8ad4c
+# ╠═ca2bf496-d24c-4813-81cb-a643a8ed73ad
 # ╠═ac23c880-cd4b-4342-8551-558781402ebe
 # ╠═e032f027-f41d-42d1-a593-52f04da01586
 # ╠═57e933c8-0b1c-48e4-bae9-3882088ec7f9
