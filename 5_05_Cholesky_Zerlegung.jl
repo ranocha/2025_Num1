@@ -4,18 +4,6 @@
 using Markdown
 using InteractiveUtils
 
-# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
-macro bind(def, element)
-    #! format: off
-    return quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
-        local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-        el
-    end
-    #! format: on
-end
-
 # ╔═╡ f05a5972-58b1-4788-a0a8-24966d6714da
 begin
 	using PlutoUI
@@ -50,62 +38,52 @@ using LaTeXStrings
 
 # ╔═╡ e6c64c80-773b-11ef-2379-bf6609137e69
 md"""
-# 5.4 LU-Zerlegung
+# 5.5 Cholesky-Zerlegung
 
-Als erstes betrachten wir eine kleine $(2 \times 2)$-Matrix
+Bevor wir die Cholesky-Zerlegung mit der LU-Zerlegung vergleichen, gehen
+wir noch einmal auf eine wichtige Merkregel der numerischen linearen Algebra
+ein:
 
-$$A = \begin{pmatrix} \varepsilon & 2 \\ 1 & 1 \end{pmatrix}$$
+> Man berechnet keine Inverse, um lineare Gleichungssysteme zu lösen - sondern eine Zerlegung/Faktorisierung der Matrix!
 
-und das zugehörige lineare Gleichungssystem $A x = b$ mit $b = (1, 1)^T$.
+Dazu betrachten wir die symmetrische Matrix 
+
+$$\begin{equation*}
+  A = \begin{pmatrix}
+    2 \Delta x & \Delta x \\
+    \Delta x & 4 \Delta x & \Delta x \\
+    & \Delta x & 4 \Delta x & \Delta x \\
+    & & \ddots & \ddots & \ddots \\
+    & & & \Delta x & 4 \Delta x & \Delta x \\
+    & & & & \Delta x & 2 \Delta x
+  \end{pmatrix}
+\end{equation*}$$
+
+der natürlichen kubischen Splines mit äquidistantem Gitter.
 """
 
-# ╔═╡ a1500aa7-421b-47b4-9d3c-0ad8ba6be4a3
+# ╔═╡ 9c7377be-8808-4353-8241-972bc4bcce16
+function get_matrix(::Type{Tridiagonal}, n)
+	dl = ones(n - 1)
+	d  = 2 * ones(n)
+	du = ones(n - 1)
+	A = Tridiagonal(dl, d, du)
+	return A
+end
+
+# ╔═╡ f113314a-3402-4b9d-81a1-0fddfe7ac9f6
 md"""
-``\varepsilon`` = $(@bind ε Slider([Float64(1 // 10^n) for n in 18:-1:0], show_value = true, default = 1.0e-16))
-"""
+Die Inverse der Matrix ist also voll besetzt! Wie skaliert der Aufwand
+des Lösens eines linearen Gleichungssystems mit `A`
 
-# ╔═╡ 748adee1-935c-420d-9fd3-d0e4e6ac9b7d
-A = [ε 2; 1 1]
+- durch Berechnen einer geeignete Zerlegung?
+- durch Berechnen der Inversen und anschließender Multiplikation mit einem Vektor>
 
-# ╔═╡ 8c9add1c-932b-4803-a9d3-737c10f05c37
-b = [1, 1]
-
-# ╔═╡ dac8dbc1-3bef-4712-894f-c5620e5cad21
-md"""
-Die Konditionszahl dieser Matrix ist moderat und das Gleichungssystem lässt
-sich numerisch gut lösen.
-"""
-
-# ╔═╡ d631ad5f-7afe-4a99-8c17-51fc1d30c372
-cond(A)
-
-# ╔═╡ e8e307b6-c068-4436-bfcb-964ad610d272
-x = A \ b
-
-# ╔═╡ a6bacd4f-6de0-4257-b71d-aa1b8c919030
-A * x - b
-
-# ╔═╡ 2bfd201f-6d07-4429-8513-92f6e52d8385
-md"""
-Wenn wir allerdings den Gauß-Algorithmus (die LU-Zerlegung) ohne Pivotisierung
-verwenden, erhalten wir für kleine $$\varepsilon$$ sehr schlechte Ergebnisse! 
-"""
-
-# ╔═╡ 9d8e18fb-018c-4407-b6f0-97c66a8961e8
-x_bad = lu(A, NoPivot()) \ b
-
-# ╔═╡ a532bdcf-e6db-4b82-b820-6f43920f612f
-A * x_bad - b
-
-# ╔═╡ ed08acdb-d5fb-41f4-b3ac-1cd880d31807
-md"""
-Also: Selbst wenn die LU-Zerlegung ohne Pivotisierung durchgeführt werden kann,
-sollte man in der Regel trotzdem eine Pivotisierung verwenden.
 """
 
 # ╔═╡ f628e1fd-2133-43ae-b217-000a9a6f15b2
 md"""
-## Strukturierte Matrizen
+## Wiederholung: Strukturierte Matrizen
 
 Wir betrachten die speziellen Matrizen der Form
 
@@ -122,7 +100,8 @@ $$\begin{equation*}
 
 die bei natürlichen kubischen Splines aufgetreten sind. Bisher haben wir
 vor allem mit der Standard-Repräsentation von Matrizen als dichtbesetzte Arrays
-gearbeitet.
+gearbeitet. Hier betrachten wir nur äquidistante Gitter, um symmetrische Matrizen
+zu erhalten.
 """
 
 # ╔═╡ e5548e9e-82e5-4601-80b8-a42275e71d3a
@@ -133,54 +112,9 @@ function get_matrix(::Type{Matrix}, n)
 	return A
 end
 
-# ╔═╡ 0eb9f760-d407-4b89-af0a-927a9cd41da3
-md"""
-Es liegt jedoch eine Tridiagonalmatrix vor, was wir auch gezielt als Information
-verwenden können.
-"""
-
-# ╔═╡ 9c7377be-8808-4353-8241-972bc4bcce16
-function get_matrix(::Type{Tridiagonal}, n)
-	dl = ones(n - 1)
-	d  = 2 * ones(n)
-	du = ones(n - 1)
-	A = Tridiagonal(dl, d, du)
-	return A
-end
-
-# ╔═╡ 8d372678-2984-44f1-981b-2e168008310f
-md"""
-Für den Spezielfall hier mit uniformen Gitter ist die Matrix sogar symmetrisch,
-was wir ebenfalls nutzen können. Diesen Matrix-Typ konnten wir schon bei der
-Berechnung der Stützstellen und Gewichte der Gauß-Quadratur verwenden.
-"""
-
-# ╔═╡ fb8b360f-977e-492d-ad15-19f95455f918
-function get_matrix(::Type{SymTridiagonal}, n)
-	d  = 2 * ones(n)
-	du = ones(n - 1)
-	A = SymTridiagonal(d, du)
-	return A
-end
-
-# ╔═╡ 7b5de8b2-f757-4d97-80e3-73161bb6802b
-md"""
-Manchmal hat man es auch mit dünnbesetzten Matrizen zu tun, die keine
-Tridiagonalmatrizen sind sondern eine Bandstruktur mit mehreren besetzten
-Nebendiagonalen haben. Auch für solche Fälle gibt es spezielle Matrix-Typen.
-"""
-
-# ╔═╡ a3a0b4b7-b710-4868-8297-efec423dc8c9
-function get_matrix(::Type{BandedMatrix}, n)
-	A = BandedMatrix(-1 => ones(n - 1),
-		             0  => 2 * ones(n),
-  		             +1 => ones(n - 1))
-	return A
-end
-
 # ╔═╡ 4990e70a-0da3-48c3-b774-9c3dad27d907
 md"""
-Schließlich gibt es auch allgemeine dünnbesetzte Matrizen, auf deren interne
+Außerdem verwenden wir allgemeine dünnbesetzte Matrizen, auf deren interne
 Datenstrukturen wir hier zunächst nicht weiter eingehen.
 """
 
@@ -192,26 +126,70 @@ function get_matrix(::Type{SparseMatrixCSC}, n)
 	return A
 end
 
+# ╔═╡ 48ca3c10-54f8-4297-9647-59325307587c
+A = get_matrix(Tridiagonal, 10)
+
+# ╔═╡ 058eb1a9-8249-4be5-a168-a01729a3017c
+inv(A)
+
 # ╔═╡ 5af86c18-b2af-4100-a91c-8e147af55592
 get_matrix(Matrix, 10)
-
-# ╔═╡ dfa9b962-bb90-4792-a065-5eb66cf52321
-get_matrix(Tridiagonal, 10)
-
-# ╔═╡ 26a245a9-f831-4831-b858-578b507ce73a
-get_matrix(SymTridiagonal, 10)
-
-# ╔═╡ 65beb409-9a90-4040-be2b-a50711caa2db
-get_matrix(BandedMatrix, 10)
 
 # ╔═╡ 0c431f77-1575-46a7-bbc2-04331adfa1b0
 get_matrix(SparseMatrixCSC, 10)
 
 # ╔═╡ 262c9dfd-eda5-4f08-8a94-69b249ba12fb
 md"""
-Wir vergleichen die Effizienz einer jeweils angepassten LU-Zerlegung für
-die verschiedenen Matrix-Typen und verschiedene Größen $n$ von $A \in \mathbb{R}^{n \times n}$.
+Wir vergleichen die Effizienz einer jeweils angepassten LU- und Cholesky-Zerlegungen
+für die verschiedenen Matrix-Typen und verschiedene Größen $n$ von 
+$A \in \mathbb{R}^{n \times n}$.
 """
+
+# ╔═╡ 074c3fc3-544e-45f0-b0cb-ce5ea112528e
+function compare_performance()
+	types = [Matrix, SparseMatrixCSC]
+	ns_small = 10 .^ (1:4)
+	ns_large = 10 .^ (1:6)
+
+	fig = Figure()
+	ax = Axis(fig[1, 1]; xscale = log10, yscale = log10,
+			  xlabel = L"Größe $n$ der $(n \times n)$-Matrizen",
+			  ylabel = "Laufzeit in Sekunden")
+
+	for T in types
+		if T == Matrix
+			ns = ns_small
+		else
+			ns = ns_large
+		end
+
+		for (factorization, wrapper) in ((lu, identity), (cholesky, Symmetric))
+			runtimes = zeros(length(ns))
+			deviations = zeros(length(ns))
+			
+			for (i, n) in enumerate(ns)
+				A = get_matrix(T, n)
+				result = @benchmark $factorization($(wrapper(A))) seconds=0.5 samples=10
+				factor = 1.0e-9 # runtimes in nanoseconds converted to seconds
+				runtimes[i] = factor * time(mean(result))
+				deviations[i] = factor * time(std(result))
+			end
+	
+			max_deviations = deviations
+			min_deviations = @. min(deviations, runtimes)
+	
+			scatter!(ax, ns, runtimes; label = string(nameof(typeof(get_matrix(T, 10)))) * ", $factorization")
+			errorbars!(ax, ns, runtimes, min_deviations, max_deviations)
+		end
+	end
+
+	axislegend(ax; position = :lt)
+
+	return fig
+end
+
+# ╔═╡ 55976e81-fafa-4973-a6d7-454eaeb84beb
+compare_performance()
 
 # ╔═╡ 4340e86a-e0fe-4cfe-9d1a-9bb686cbb2fd
 md"""
@@ -239,50 +217,6 @@ md"""
 _First, we will install (and compile) some packages. This can take a few minutes when  running this notebook for the first time._
 """
 
-
-# ╔═╡ 074c3fc3-544e-45f0-b0cb-ce5ea112528e
-function compare_performance()
-	types = [Matrix, SparseMatrixCSC, BandedMatrix, Tridiagonal]
-	ns_small = 10 .^ (1:4)
-	ns_large = 10 .^ (1:6)
-
-	fig = Figure()
-	ax = Axis(fig[1, 1]; xscale = log10, yscale = log10,
-			  xlabel = L"Größe $n$ der $(n \times n)$-Matrizen",
-			  ylabel = "Laufzeit in Sekunden")
-
-	for T in types
-		if T == Matrix
-			ns = ns_small
-		else
-			ns = ns_large
-		end
-		
-		runtimes = zeros(length(ns))
-		deviations = zeros(length(ns))
-		
-		for (i, n) in enumerate(ns)
-			A = get_matrix(T, n)
-			result = @benchmark lu($A) seconds=0.5 samples=10
-			factor = 1.0e-9 # runtimes in nanoseconds converted to seconds
-			runtimes[i] = factor * time(mean(result))
-			deviations[i] = factor * time(std(result))
-		end
-
-		max_deviations = deviations
-		min_deviations = @. min(deviations, runtimes)
-
-		scatter!(ax, ns, runtimes; label = string(nameof(typeof(get_matrix(T, 10)))))
-		errorbars!(ax, ns, runtimes, min_deviations, max_deviations)
-	end
-
-	axislegend(ax; position = :lt)
-
-	return fig
-end
-
-# ╔═╡ 55976e81-fafa-4973-a6d7-454eaeb84beb
-compare_performance()
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1847,29 +1781,13 @@ version = "3.6.0+0"
 
 # ╔═╡ Cell order:
 # ╟─e6c64c80-773b-11ef-2379-bf6609137e69
-# ╟─a1500aa7-421b-47b4-9d3c-0ad8ba6be4a3
-# ╠═748adee1-935c-420d-9fd3-d0e4e6ac9b7d
-# ╠═8c9add1c-932b-4803-a9d3-737c10f05c37
-# ╟─dac8dbc1-3bef-4712-894f-c5620e5cad21
-# ╠═d631ad5f-7afe-4a99-8c17-51fc1d30c372
-# ╠═e8e307b6-c068-4436-bfcb-964ad610d272
-# ╠═a6bacd4f-6de0-4257-b71d-aa1b8c919030
-# ╟─2bfd201f-6d07-4429-8513-92f6e52d8385
-# ╠═9d8e18fb-018c-4407-b6f0-97c66a8961e8
-# ╠═a532bdcf-e6db-4b82-b820-6f43920f612f
-# ╟─ed08acdb-d5fb-41f4-b3ac-1cd880d31807
+# ╠═9c7377be-8808-4353-8241-972bc4bcce16
+# ╠═48ca3c10-54f8-4297-9647-59325307587c
+# ╠═058eb1a9-8249-4be5-a168-a01729a3017c
+# ╟─f113314a-3402-4b9d-81a1-0fddfe7ac9f6
 # ╟─f628e1fd-2133-43ae-b217-000a9a6f15b2
 # ╠═e5548e9e-82e5-4601-80b8-a42275e71d3a
 # ╠═5af86c18-b2af-4100-a91c-8e147af55592
-# ╟─0eb9f760-d407-4b89-af0a-927a9cd41da3
-# ╠═9c7377be-8808-4353-8241-972bc4bcce16
-# ╠═dfa9b962-bb90-4792-a065-5eb66cf52321
-# ╟─8d372678-2984-44f1-981b-2e168008310f
-# ╠═fb8b360f-977e-492d-ad15-19f95455f918
-# ╠═26a245a9-f831-4831-b858-578b507ce73a
-# ╟─7b5de8b2-f757-4d97-80e3-73161bb6802b
-# ╠═a3a0b4b7-b710-4868-8297-efec423dc8c9
-# ╠═65beb409-9a90-4040-be2b-a50711caa2db
 # ╟─4990e70a-0da3-48c3-b774-9c3dad27d907
 # ╠═d5f525c6-932a-4d86-9dfe-dd7f7da0772b
 # ╠═0c431f77-1575-46a7-bbc2-04331adfa1b0
