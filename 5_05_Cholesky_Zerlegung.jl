@@ -77,7 +77,7 @@ Die Inverse der Matrix ist also voll besetzt! Wie skaliert der Aufwand
 des Lösens eines linearen Gleichungssystems mit `A`
 
 - durch Berechnen einer geeignete Zerlegung?
-- durch Berechnen der Inversen und anschließender Multiplikation mit einem Vektor>
+- durch Berechnen der Inversen und anschließender Multiplikation mit einem Vektor?
 
 """
 
@@ -145,6 +145,33 @@ für die verschiedenen Matrix-Typen und verschiedene Größen $n$ von
 $A \in \mathbb{R}^{n \times n}$.
 """
 
+# ╔═╡ 4340e86a-e0fe-4cfe-9d1a-9bb686cbb2fd
+md"""
+# Appendix
+
+You can find code and utility material in this appendix.
+"""
+
+# ╔═╡ 42fa44f5-06df-41a1-9b33-71386a0cb6d2
+space = html"<br><br><br>";
+
+# ╔═╡ 96351793-9bcc-4376-9c95-b6b42f061ad8
+space
+
+# ╔═╡ bc148aac-1ef7-4611-b187-72f1255ff05f
+space
+
+# ╔═╡ 92377a23-ac4f-4d5f-9d57-a0a03693307c
+space
+
+# ╔═╡ e771a1f9-6813-4383-b34d-83530de4aa2e
+md"""
+#### Installing packages
+
+_First, we will install (and compile) some packages. This can take a few minutes when  running this notebook for the first time._
+"""
+
+
 # ╔═╡ 074c3fc3-544e-45f0-b0cb-ce5ea112528e
 function compare_performance()
 	types = [Matrix, SparseMatrixCSC]
@@ -190,33 +217,6 @@ end
 
 # ╔═╡ 55976e81-fafa-4973-a6d7-454eaeb84beb
 compare_performance()
-
-# ╔═╡ 4340e86a-e0fe-4cfe-9d1a-9bb686cbb2fd
-md"""
-# Appendix
-
-You can find code and utility material in this appendix.
-"""
-
-# ╔═╡ 42fa44f5-06df-41a1-9b33-71386a0cb6d2
-space = html"<br><br><br>";
-
-# ╔═╡ 96351793-9bcc-4376-9c95-b6b42f061ad8
-space
-
-# ╔═╡ bc148aac-1ef7-4611-b187-72f1255ff05f
-space
-
-# ╔═╡ 92377a23-ac4f-4d5f-9d57-a0a03693307c
-space
-
-# ╔═╡ e771a1f9-6813-4383-b34d-83530de4aa2e
-md"""
-#### Installing packages
-
-_First, we will install (and compile) some packages. This can take a few minutes when  running this notebook for the first time._
-"""
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
