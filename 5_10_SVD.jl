@@ -19,6 +19,9 @@ end
 # ╔═╡ 4723c005-cb1e-4c93-a05f-94afc83d8370
 using LinearAlgebra, SparseArrays
 
+# ╔═╡ 2f987761-0637-437d-a073-174a7cbfb717
+using Random
+
 # ╔═╡ 2e23590a-171c-11ee-39ba-3b8e31d54728
 begin
 	using PlutoUI
@@ -48,6 +51,100 @@ using TestImages, MosaicViews, Images
 # ╔═╡ f68c73d7-db26-4928-8782-137f3da2a4d6
 md"""
 # 5.10 Singulärwertzerlegung (SVD)
+
+Zunächst wiederholen wir die numerischen Experimente zum linearen
+Ausgleichsproblem und ergänzen sie mit der SVD. Wir betrachten also verschiedene Verfahren, das lineare Ausgleichsproblem
+
+$$\min_x \| A x - b\|$$
+
+zu lösen:
+
+- Lösen der Normalengleichung $A^* A x = A^* b$
+- Verwendung der QR-Zerlegung von $A$
+- Verwendung der SVD von $A$
+- Multiplikation mit der Pseudo-Inversen $A^+$ von $A$
+
+Als Test-Matrizen erzuegen wir $A \in \mathbb{R}^{m \times n}$ mit $m = 10 n$
+in der Form $A = B H$ mit einer zufälligen Matrix $B$ und einer Hilbert-Matrix $H$.
+"""
+
+# ╔═╡ 64ed4594-2132-437d-8b9e-b1651bed3bc3
+let
+	# inspired from https://github.com/JuliaLang/LinearAlgebra.jl/pull/1387#issuecomment-2988431941
+	hilbert(n::Integer) = [1 / (i + j - 1) for i in 1:n, j in 1:n]
+
+	residuals_normal = Vector{Float64}()
+	residuals_qr = Vector{Float64}()
+	residuals_svd = Vector{Float64}()
+	residuals_pinv = Vector{Float64}()
+
+	times_normal = Vector{Float64}()
+	times_qr = Vector{Float64}()
+	times_svd = Vector{Float64}()
+	times_pinv = Vector{Float64}()
+
+	Random.seed!(12345)
+	ms = [10, 20, 30, 50, 100, 200, 400, 800, 1600]
+	for m in ms
+		# form an ill-conditioned matrix
+		n = m ÷ 10
+		A = randn(m, n) * hilbert(n)
+		
+		# create a right-hand side in the range of A
+		x0 = randn(n)
+		b = A * x0
+		
+		# use the normal equations
+		x = Symmetric(A' * A) \ (A' * b)
+		push!(residuals_normal, norm(A * x - b) / norm(b))
+		t = @elapsed Symmetric(A' * A) \ (A' * b)
+		push!(times_normal, t)
+		
+		# use the QR decomposition
+		x = qr(A) \ b
+		push!(residuals_qr, norm(A * x - b) / norm(b))
+		t = @elapsed qr(A) \ b
+		push!(times_qr, t)
+		
+		# use the SVD
+		x = svd(A) \ b
+		push!(residuals_svd, norm(A * x - b) / norm(b))
+		t = @elapsed svd(A) \ b
+		push!(times_svd, t)
+		
+		# use the pseudoinverse
+		x = pinv(A) * b
+		push!(residuals_pinv, norm(A * x - b) / norm(b))
+		t = @elapsed pinv(A) * b
+		push!(times_pinv, t)
+	end
+
+	fig = Figure()
+	ax = Axis(fig[1, 1]; xlabel = L"m", ylabel = "Residuum",
+			  xscale = log10, yscale = log10)
+	scatter!(ax, ms, residuals_normal; label = "Normalengleichung")
+	scatter!(ax, ms, residuals_qr; label = "QR")
+	scatter!(ax, ms, residuals_svd; label = "SVD")
+	scatter!(ax, ms, residuals_pinv; label = "Pseudo-Inv.")
+	# axislegend(ax; position = :lt)
+
+	ax2 = Axis(fig[2, 1]; xlabel = L"m", ylabel = "Laufzeit in Sekunden",
+			   xscale = log10, yscale = log10)
+	scatter!(ax2, ms, times_normal; label = "Normalengleichung")
+	scatter!(ax2, ms, times_qr; label = "QR")
+	scatter!(ax2, ms, times_svd; label = "SVD")
+	scatter!(ax2, ms, times_pinv; label = "Pseudo-Inv.")
+
+	linkxaxes!(ax, ax2)
+
+	Legend(fig[0, 1], ax; nbanks = 4, tellheight = true, tellwidth = false)
+	
+	fig
+end
+
+# ╔═╡ 4d7b9482-7195-4c70-b9d3-811bf51a2a6d
+md"""
+## SVD zur Kompression von Daten
 
 Als erstes laden wir das Bild eines bekannten Mathematikers von Wikimedia herunter. Wen sehen wir hier?
 """
@@ -165,6 +262,7 @@ LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MosaicViews = "e94cdb99-869f-56ef-bcf0-1ae2bcbe0389"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"
 
@@ -183,7 +281,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.9"
 manifest_format = "2.0"
-project_hash = "f1f6e93ae6fc3d05cc9f04e858423d1d6c7d3828"
+project_hash = "ae968770abc31a4a4c8b1b5f3d8dfcf4622bf15a"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -2118,6 +2216,8 @@ version = "3.6.0+0"
 
 # ╔═╡ Cell order:
 # ╟─f68c73d7-db26-4928-8782-137f3da2a4d6
+# ╟─64ed4594-2132-437d-8b9e-b1651bed3bc3
+# ╟─4d7b9482-7195-4c70-b9d3-811bf51a2a6d
 # ╟─511726e9-4c1c-4bb6-9b11-97e12659f471
 # ╟─18c8d23a-7c6b-4a9e-b18e-a52dd293edcc
 # ╟─5ca6d08e-8cae-40df-90f5-a48cbf97c4ee
@@ -2130,6 +2230,7 @@ version = "3.6.0+0"
 # ╟─eba7d67d-9206-4ed4-810f-91e07b6b17d4
 # ╠═c4fae8a5-0a31-45b0-a048-daf27d6248bf
 # ╠═4723c005-cb1e-4c93-a05f-94afc83d8370
+# ╠═2f987761-0637-437d-a073-174a7cbfb717
 # ╠═2e23590a-171c-11ee-39ba-3b8e31d54728
 # ╠═2562ca75-a243-48c7-b506-e4731b4075c5
 # ╠═318397ec-b253-4b6d-b1f4-523f823926f8

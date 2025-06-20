@@ -44,8 +44,6 @@ zu lösen:
 
 - Lösen der Normalengleichung $A^* A x = A^* b$
 - Verwendung der QR-Zerlegung von $A$
-- Verwendung der SVD von $A$
-- Multiplikation mit der Pseudo-Inversen $A^+$ von $A$
 
 Als Test-Matrizen erzuegen wir $A \in \mathbb{R}^{m \times n}$ mit $m = 10 n$
 in der Form $A = B H$ mit einer zufälligen Matrix $B$ und einer Hilbert-Matrix $H$.
@@ -58,13 +56,13 @@ let
 
 	residuals_normal = Vector{Float64}()
 	residuals_qr = Vector{Float64}()
-	residuals_svd = Vector{Float64}()
-	residuals_pinv = Vector{Float64}()
+	# residuals_svd = Vector{Float64}()
+	# residuals_pinv = Vector{Float64}()
 
 	times_normal = Vector{Float64}()
 	times_qr = Vector{Float64}()
-	times_svd = Vector{Float64}()
-	times_pinv = Vector{Float64}()
+	# times_svd = Vector{Float64}()
+	# times_pinv = Vector{Float64}()
 
 	Random.seed!(12345)
 	ms = [10, 20, 30, 50, 100, 200, 400, 800, 1600]
@@ -89,17 +87,17 @@ let
 		t = @elapsed qr(A) \ b
 		push!(times_qr, t)
 		
-		# use the SVD
-		x = svd(A) \ b
-		push!(residuals_svd, norm(A * x - b) / norm(b))
-		t = @elapsed svd(A) \ b
-		push!(times_svd, t)
+		# # use the SVD
+		# x = svd(A) \ b
+		# push!(residuals_svd, norm(A * x - b) / norm(b))
+		# t = @elapsed svd(A) \ b
+		# push!(times_svd, t)
 		
-		# use the pseudoinverse
-		x = pinv(A) * b
-		push!(residuals_pinv, norm(A * x - b) / norm(b))
-		t = @elapsed pinv(A) * b
-		push!(times_pinv, t)
+		# # use the pseudoinverse
+		# x = pinv(A) * b
+		# push!(residuals_pinv, norm(A * x - b) / norm(b))
+		# t = @elapsed pinv(A) * b
+		# push!(times_pinv, t)
 	end
 
 	fig = Figure()
@@ -107,20 +105,20 @@ let
 			  xscale = log10, yscale = log10)
 	scatter!(ax, ms, residuals_normal; label = "Normalengleichung")
 	scatter!(ax, ms, residuals_qr; label = "QR")
-	scatter!(ax, ms, residuals_svd; label = "SVD")
-	scatter!(ax, ms, residuals_pinv; label = "Pseudo-Inv.")
+	# scatter!(ax, ms, residuals_svd; label = "SVD")
+	# scatter!(ax, ms, residuals_pinv; label = "Pseudo-Inv.")
 	# axislegend(ax; position = :lt)
 
 	ax2 = Axis(fig[2, 1]; xlabel = L"m", ylabel = "Laufzeit in Sekunden",
 			   xscale = log10, yscale = log10)
 	scatter!(ax2, ms, times_normal; label = "Normalengleichung")
 	scatter!(ax2, ms, times_qr; label = "QR")
-	scatter!(ax2, ms, times_svd; label = "SVD")
-	scatter!(ax2, ms, times_pinv; label = "Pseudo-Inv.")
+	# scatter!(ax2, ms, times_svd; label = "SVD")
+	# scatter!(ax2, ms, times_pinv; label = "Pseudo-Inv.")
 
 	linkxaxes!(ax, ax2)
 
-	Legend(fig[0, 1], ax; tellheight = true, nbanks = 4)
+	Legend(fig[0, 1], ax; nbanks = 4, tellheight = true, tellwidth = false)
 	
 	fig
 end
