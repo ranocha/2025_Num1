@@ -61,7 +61,7 @@ und das zugehörige lineare Gleichungssystem $A x = b$ mit $b = (1, 1)^T$.
 
 # ╔═╡ a1500aa7-421b-47b4-9d3c-0ad8ba6be4a3
 md"""
-``\varepsilon`` = $(@bind ε Slider([Float64(1 // 10^n) for n in 18:-1:0], show_value = true, default = 1.0e-16))
+``\varepsilon`` = $(@bind ε Slider(vcat(0.0, [Float64(1 // 10^n) for n in 18:-1:0]), show_value = true, default = 1.0e-16))
 """
 
 # ╔═╡ 748adee1-935c-420d-9fd3-d0e4e6ac9b7d
