@@ -45,8 +45,8 @@ zu lösen:
 - Lösen der Normalengleichung $A^* A x = A^* b$
 - Verwendung der QR-Zerlegung von $A$
 
-Als Test-Matrizen erzuegen wir $A \in \mathbb{R}^{m \times n}$ mit $m = 10 n$
-in der Form $A = B H$ mit einer zufälligen Matrix $B$ und einer Hilbert-Matrix $H$.
+Als Test-Matrizen erzeugen wir $A \in \mathbb{R}^{m \times n}$ mit $m = 10 n$
+in der Form $A = Z H$ mit einer zufälligen Matrix $Z$ und einer Hilbert-Matrix $H$.
 """
 
 # ╔═╡ 7bde4dc1-a9e7-4867-acf7-0871d79cba6b

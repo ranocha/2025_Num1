@@ -64,8 +64,8 @@ zu lösen:
 - Verwendung der SVD von $A$
 - Multiplikation mit der Pseudo-Inversen $A^+$ von $A$
 
-Als Test-Matrizen erzuegen wir $A \in \mathbb{R}^{m \times n}$ mit $m = 10 n$
-in der Form $A = B H$ mit einer zufälligen Matrix $B$ und einer Hilbert-Matrix $H$.
+Als Test-Matrizen erzeugen wir $A \in \mathbb{R}^{m \times n}$ mit $m = 10 n$
+in der Form $A = Z H$ mit einer zufälligen Matrix $Z$ und einer Hilbert-Matrix $H$.
 """
 
 # ╔═╡ 64ed4594-2132-437d-8b9e-b1651bed3bc3

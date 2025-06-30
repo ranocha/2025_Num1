@@ -72,7 +72,7 @@ $$A u = f.$$
 md"`size_1d = ` $(@bind size_1d Select(2:20, default = 10))"
 
 # ╔═╡ 95e06886-2fbc-411d-bfa4-f11a678ff235
-md"`maxiter = ` $(@bind maxiter Select([10, 50, 500, 1000], default = 500))"
+md"`maxiter = ` $(@bind maxiter Select([10, 50, 500, 1000, 10_000], default = 500))"
 
 # ╔═╡ eba7d67d-9206-4ed4-810f-91e07b6b17d4
 md"""
