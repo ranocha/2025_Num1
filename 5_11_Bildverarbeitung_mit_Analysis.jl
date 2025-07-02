@@ -116,11 +116,6 @@ Durch eine einfache Bildverarbeitung, die auf Analysis basiert, können wir die 
 als Lagrange-Euler.
 """
 
-# ╔═╡ 01fe71a6-88b8-4733-a480-47c67f19e40a
-md"""
-Das können wir auch in der anderen Reihenfolge machen und das Gesicht von Euler auf den Körper von Lagrange kopieren.
-"""
-
 # ╔═╡ a46b6791-d20e-43e3-b0d8-7ed0f0123b33
 md"""
 Die wesentlichen Techniken dahinter sind partielle Differentialgleichungen,
@@ -2339,7 +2334,6 @@ version = "3.6.0+0"
 # ╟─0074af6b-2d38-450e-951e-23014fe7a043
 # ╟─e90b1d9c-9d04-4a16-b3e4-442c32db5725
 # ╟─dce2245c-8eff-4690-82bc-407c32104041
-# ╟─01fe71a6-88b8-4733-a480-47c67f19e40a
 # ╟─a46b6791-d20e-43e3-b0d8-7ed0f0123b33
 # ╟─96351793-9bcc-4376-9c95-b6b42f061ad8
 # ╟─bc148aac-1ef7-4611-b187-72f1255ff05f
